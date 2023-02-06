@@ -26,6 +26,10 @@ parser.add_argument('--output_dir', default='./finetune', type=str)
 parser.add_argument('--num_samples', default=50, type=int)
 parser.add_argument('--criterion', type=str, required=True, help='the criterion of how to select the node need to be patched.' \
                                                                   'currently only support ``wrong_to_correct`` and ``random``')
+parser.add_argument('--manner', type=str, required=True, default='GD', \
+                    choices=['GD','GD_Diff', 'Ada_GD_Diff'], help='edit manner for finetuning')
+parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
+parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
 
 MAX_NUM_EDIT_STEPS = 10
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 20
@@ -63,6 +67,7 @@ if __name__ == '__main__':
         model_config['loop'] = loop
         model_config['normalize'] = normalize
     print(args)
+    print(f'Edit manner: {args.manner}')
     print(f'model config: {model_config}')
     if args.dataset == 'yelp':
         multi_label = True
@@ -90,7 +95,9 @@ if __name__ == '__main__':
                           is_multi_label_task=multi_label, 
                           amp_mode=False, 
                           runs=1, 
-                          seed=args.seed)
+                          seed=args.seed,
+                          hyper_diff=args.hyper_Diff,
+                          gamma=args.gamma)
 
     bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
@@ -113,7 +120,8 @@ if __name__ == '__main__':
                                         whole_data=whole_data, 
                                         max_num_step=MAX_NUM_EDIT_STEPS, 
                                         bef_edit_results=bef_edit_results, 
-                                        eval_setting='sequential')
+                                        eval_setting='sequential',
+                                        manner=args.manner)
     print(seq_results)
 
     print(f'the calculated stats after {args.num_samples} independent edit '
@@ -123,7 +131,8 @@ if __name__ == '__main__':
                                         whole_data=whole_data, 
                                         max_num_step=MAX_NUM_EDIT_STEPS, 
                                         bef_edit_results=bef_edit_results, 
-                                        eval_setting='independent')
+                                        eval_setting='independent',
+                                        manner=args.manner)
     print(ind_results)
 
     print(f'the calculated stats after batch edit with batch size {args.num_samples}, '
@@ -133,11 +142,20 @@ if __name__ == '__main__':
                                         whole_data=whole_data, 
                                         max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH, 
                                         bef_edit_results=bef_edit_results, 
-                                        eval_setting='batch')
+                                        eval_setting='batch',
+                                        manner=args.manner)
     print(batch_results)
     summary = {'seq_edit': seq_results, 
                'ind_edit': ind_results, 
                'batch_edit': batch_results,
                'model_config': model_config}
-    with open(f'{args.output_dir}/{args.dataset}/{MODEL_FAMILY.__name__}_{args.criterion}_eval.json', 'w') as f:
+    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'  
+    if args.manner == 'GD':
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
+    elif args.manner == 'GD_Diff':
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
+    else:
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}_gamma={args.gamma}.json'
+
+    with open(json_name, 'w') as f:
         json.dump(summary, f)

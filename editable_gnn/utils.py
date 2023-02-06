@@ -1,8 +1,17 @@
+'''
+Author: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
+Date: 2023-01-31 14:01:14
+LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
+LastEditTime: 2023-02-06 11:55:07
+FilePath: /edit_gnn/editable_gnn/utils.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import contextlib
 import torch
 import random
 import numpy as np
 from torch import nn
+import torch.nn.functional as F
 
 
 def set_seeds_all(seed=1):
@@ -10,6 +19,20 @@ def set_seeds_all(seed=1):
     np.random.seed(seed)
     random.seed(seed)
     torch.cuda.manual_seed(seed)
+
+def kl_logit(logit_pred, logit_ori):
+    prob_pred = F.softmax(logit_pred, dim=1)
+    prob_ori = F.softmax(logit_ori, dim=1)
+    # kl_loss = torch.sum(prob_pred * (torch.log(prob_pred) - torch.log(prob_ori)), dim=1)
+    kl_loss = torch.sum((prob_pred - prob_ori)**2, dim=1)
+    return torch.mean(kl_loss)
+
+def ada_kl_logit(logit_pred, logit_ori, gamma):
+    prob_pred = F.softmax(logit_pred, dim=1)
+    prob_ori = F.softmax(logit_ori, dim=1)
+    kl_loss = torch.sum(prob_pred * (torch.log(prob_pred) - torch.log(prob_ori)), dim=1)
+    kl_loss =  torch.pow(kl_loss, gamma+1)
+    return torch.mean(kl_loss)
 
 
 @contextlib.contextmanager

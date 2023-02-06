@@ -5,6 +5,7 @@ from pathlib import Path
 from copy import deepcopy
 
 import torch
+import torch.nn as nn
 import numpy as np
 import re
 import torch.nn.functional as F
@@ -14,7 +15,7 @@ from torch_geometric.utils import k_hop_subgraph
 from torch_geometric.data.data import Data
 from editable_gnn.models.base import BaseModel
 from editable_gnn.logger import Logger
-from editable_gnn.utils import set_seeds_all
+from editable_gnn.utils import set_seeds_all, kl_logit, ada_kl_logit
 
 
 class BaseTrainer(object):
@@ -28,7 +29,9 @@ class BaseTrainer(object):
                  is_multi_label_task: bool,
                  amp_mode: bool = False,
                  runs: int = 10,
-                 seed: int = 0) -> None:
+                 seed: int = 0,
+                 hyper_diff: float = 1.0,
+                 gamma: float = 1.0) -> None:
         self.model = model
         self.train_data = train_data
         self.whole_data = whole_data
@@ -44,6 +47,9 @@ class BaseTrainer(object):
             os.makedirs(self.save_path)
         self.loss_op = F.binary_cross_entropy_with_logits if is_multi_label_task else F.cross_entropy
         self.seed = seed
+
+        self.hyper_diff = hyper_diff
+        self.gamma = gamma
 
 
     def train_loop(self,
@@ -238,14 +244,82 @@ class BaseTrainer(object):
                     break
         return model, success, loss, step
 
+    def single_Diff_edit(self, model, idx, label, optimizer, max_num_step):       
+        input = self.grab_input(self.whole_data)
+        with torch.no_grad():
+            out_ori_val = model(**input)[self.whole_data.val_mask]
 
-    def sequential_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step):
+        for step in range(1, max_num_step + 1):
+            optimizer.zero_grad()
+            input = self.grab_input(self.whole_data)
+            out = model(**input)
+            # pdb.set_trace()
+            kl_loss = kl_logit(out[self.whole_data.val_mask], out_ori_val)
+            loss = self.loss_op(out[idx], label) + self.hyper_diff * kl_loss
+            # pdb.set_trace()
+            loss.backward()
+            optimizer.step()
+            y_pred = out[idx].argmax(dim=-1)
+            # sequential or independent setting
+            if label.shape[0] == 1:
+                if y_pred == label:
+                    success = True
+                    break
+                else:
+                    success = False
+            # batch setting
+            else:
+                success = int(y_pred.eq(label).sum()) / label.size(0)
+                if success == 1.:
+                    break
+        return model, success, loss, step
+    
+    def single_Diff_Ada_edit(self, model, idx, label, optimizer, max_num_step):       
+        input = self.grab_input(self.whole_data)
+        with torch.no_grad():
+            out_ori_val = model(**input)[self.whole_data.val_mask]
+
+        for step in range(1, max_num_step + 1):
+            optimizer.zero_grad()
+            input = self.grab_input(self.whole_data)
+            out = model(**input)
+            loss = self.loss_op(out[idx], label) + self.hyper_diff * ada_kl_logit(out[self.whole_data.val_mask], out_ori_val, self.gamma)
+            loss.backward()
+            optimizer.step()
+            y_pred = out[idx].argmax(dim=-1)
+            # sequential or independent setting
+            if label.shape[0] == 1:
+                if y_pred == label:
+                    success = True
+                    break
+                else:
+                    success = False
+            # batch setting
+            else:
+                success = int(y_pred.eq(label).sum()) / label.size(0)
+                if success == 1.:
+                    break
+        return model, success, loss, step
+    
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD'):
+        assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff']
+        if manner == 'GD':
+            return self.single_edit(model, idx, f_label, optimizer, max_num_step)
+        elif manner == 'GD_Diff':
+            return self.single_Diff_edit(model, idx, f_label, optimizer, max_num_step)
+        else:
+            return self.single_Diff_Ada_edit(model, idx, f_label, optimizer, max_num_step)
+
+
+
+    def sequential_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD'):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
         results_temporary = []
         for idx, f_label in tqdm(zip(node_idx_2flip, flipped_label)):
-            edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
+            # edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
+            edited_model, success, loss, steps = self.edit_select(model, idx, f_label, optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
             # for n_hop in [1, 2]:
             #     res.append(self.get_khop_neighbors_acc(model, n_hop, idx))
@@ -253,13 +327,14 @@ class BaseTrainer(object):
         return results_temporary
 
 
-    def independent_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=0):
+    def independent_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=0, manner='GD'):
         self.model.train()
         results_temporary = []
         for idx, f_label in tqdm(zip(node_idx_2flip, flipped_label)):
             model = deepcopy(self.model)
             optimizer = self.get_optimizer(self.model_config, model)
-            edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
+            # edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
+            edited_model, success, loss, steps = self.edit_select(model, idx, f_label, optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
             hop_res = []
             for n_hop in range(1, num_htop+1):
@@ -269,12 +344,14 @@ class BaseTrainer(object):
         return results_temporary
 
 
-    def batch_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step):
+    def batch_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD'):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
-        edited_model, success, loss, steps = self.single_edit(model, node_idx_2flip.squeeze(), 
-                                                              flipped_label.squeeze(), optimizer, max_num_step)
+        # edited_model, success, loss, steps = self.single_edit(model, node_idx_2flip.squeeze(), 
+        #                                                       flipped_label.squeeze(), optimizer, max_num_step)
+        edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip.squeeze(), 
+                                                              flipped_label.squeeze(), optimizer, max_num_step, manner)
         return *self.test(edited_model, whole_data), success, steps
 
 
@@ -288,7 +365,7 @@ class BaseTrainer(object):
         return acc
 
 
-    def eval_edit_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, eval_setting): 
+    def eval_edit_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, eval_setting, manner='GD'): 
         bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
         bef_edit_hop_acc = {}
         N_HOP = 3
@@ -298,7 +375,7 @@ class BaseTrainer(object):
                 bef_edit_hop_acc[n_hop].append(self.get_khop_neighbors_acc(self.model, 1, idx))
         assert eval_setting in ['sequential', 'independent', 'batch']
         if eval_setting == 'sequential':
-            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step)
+            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
             train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
@@ -306,7 +383,7 @@ class BaseTrainer(object):
             success_rate = succeses[-1]
             hop_drawdown = {}
         elif eval_setting == 'independent' :
-            results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP)
+            results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP, manner=manner)
             train_acc, val_acc, test_acc, succeses, steps, hop_acc = zip(*results_temporary)
             hop_acc = np.vstack(hop_acc)
             tra_drawdown = bef_edit_tra_acc - np.mean(train_acc)
@@ -316,9 +393,9 @@ class BaseTrainer(object):
             hop_drawdown = {}
             for n_hop in range(1, N_HOP + 1):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
-            pdb.set_trace()
+            # pdb.set_trace()
         elif eval_setting == 'batch':
-            train_acc, val_acc, test_acc, succeses, steps = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step)
+            train_acc, val_acc, test_acc, succeses, steps = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
             tra_drawdown = bef_edit_tra_acc - train_acc
             val_drawdown = bef_edit_val_acc - val_acc
             test_drawdown = bef_edit_tst_acc - test_acc
@@ -355,7 +432,9 @@ class WholeGraphTrainer(BaseTrainer):
                  is_multi_label_task: bool,
                  amp_mode: bool = False,
                  runs: int = 10,
-                 seed: int = 0) -> None:
+                 seed: int = 0,
+                 hyper_diff: float = 1.0,
+                 gamma: float = 1.0) -> None:
         super(WholeGraphTrainer, self).__init__(
             model=model, 
             train_data=train_data, 
@@ -395,3 +474,4 @@ class WholeGraphTrainer(BaseTrainer):
                 if success == 1.:
                     break
         return model, success, loss, step
+    
