@@ -248,7 +248,6 @@ class BaseTrainer(object):
         input = self.grab_input(self.whole_data)
         with torch.no_grad():
             out_ori_val = model(**input)[self.whole_data.val_mask]
-
         for step in range(1, max_num_step + 1):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
@@ -445,7 +444,9 @@ class WholeGraphTrainer(BaseTrainer):
             is_multi_label_task=is_multi_label_task,
             amp_mode=amp_mode,
             runs=runs,
-            seed=seed)
+            seed=seed,
+            hyper_diff=hyper_diff,
+            gamma=gamma)
             
 
     def grab_input(self, data: Data):
