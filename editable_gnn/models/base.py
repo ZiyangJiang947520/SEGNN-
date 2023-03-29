@@ -34,7 +34,7 @@ class BaseModel(torch.nn.Module):
     def from_pretrained(cls, in_channels: int, out_channels: int, saved_ckpt_path: str, **kwargs):
         model = cls(in_channels=in_channels, out_channels=out_channels, **kwargs)
         if not saved_ckpt_path.endswith('.pt'):
-            glob_checkpoints = [str(x) for x in Path(saved_ckpt_path).glob(f"{cls.__name__}_*.pt")]
+            glob_checkpoints = [str(x) for x in Path(saved_ckpt_path).glob(f"{cls.__name__}_run*.pt")]
             assert len(glob_checkpoints) == 1
             saved_ckpt_path = glob_checkpoints[0]
         print(f'load model weights from {saved_ckpt_path}')

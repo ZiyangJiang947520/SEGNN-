@@ -17,8 +17,11 @@ def gen_masks(y: Tensor, train_per_class: int = 20, val_per_class: int = 30,
               num_splits: int = 20) -> Tuple[Tensor, Tensor, Tensor]:
     num_classes = int(y.max()) + 1
 
-    train_mask = torch.zeros(y.size(0), num_splits, dtype=torch.bool)
-    val_mask = torch.zeros(y.size(0), num_splits, dtype=torch.bool)
+    # train_mask = torch.zeros(y.size(0), num_splits, dtype=torch.bool)
+    # val_mask = torch.zeros(y.size(0), num_splits, dtype=torch.bool)
+
+    train_mask = torch.zeros(y.size(0), dtype=torch.bool)
+    val_mask = torch.zeros(y.size(0), dtype=torch.bool)
 
     for c in range(num_classes):
         idx = (y == c).nonzero(as_tuple=False).view(-1)
@@ -27,9 +30,11 @@ def gen_masks(y: Tensor, train_per_class: int = 20, val_per_class: int = 30,
         idx = idx[perm]
 
         train_idx = idx[:train_per_class]
-        train_mask.scatter_(0, train_idx, True)
+        # train_mask.scatter_(0, train_idx, True)
+        train_mask[train_idx] = True
         val_idx = idx[train_per_class:train_per_class + val_per_class]
-        val_mask.scatter_(0, val_idx, True)
+        # val_mask.scatter_(0, val_idx, True)
+        val_mask[val_idx] = True
 
     test_mask = ~(train_mask | val_mask)
 
@@ -166,6 +171,7 @@ def get_data(root: str, name: str) -> Tuple[Data, int, int]:
 def to_inductive(data):
     data = data.clone()
     mask = data.train_mask
+    # print(f'mask={mask.shape}')
     data.x = data.x[mask]
     data.y = data.y[mask]
     data.train_mask = data.train_mask[mask]

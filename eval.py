@@ -24,11 +24,14 @@ parser.add_argument('--saved_model_path', type=str, required=True,
                     help='the path to the traiend model')
 parser.add_argument('--output_dir', default='./finetune', type=str)
 parser.add_argument('--num_samples', default=50, type=int)
+parser.add_argument('--runs', default=1, type=int,
+                    help='number of runs')
 parser.add_argument('--criterion', type=str, required=True, help='the criterion of how to select the node need to be patched.' \
                                                                   'currently only support ``wrong_to_correct`` and ``random``')
 parser.add_argument('--manner', type=str, required=True, default='GD', \
-                    choices=['GD','GD_Diff', 'Ada_GD_Diff'], help='edit manner for finetuning')
+                    choices=['GD','GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus'], help='edit manner for finetuning')
 parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
+parser.add_argument('--train_split', default=1, type=int, help='Training data split number for EDG_Plus')
 parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
 
 MAX_NUM_EDIT_STEPS = 10
@@ -75,6 +78,7 @@ if __name__ == '__main__':
         multi_label = False
     MODEL_FAMILY = getattr(models, model_config['arch_name'])
     data, num_features, num_classes = get_data(args.root, args.dataset)
+    # print(f'data={data}')
     model = MODEL_FAMILY.from_pretrained(in_channels=num_features, 
                                 out_channels=num_classes, 
                                 saved_ckpt_path=args.saved_model_path,
@@ -82,22 +86,24 @@ if __name__ == '__main__':
 
     print(model)
     model.cuda()
+    if '_MLP' in model_config['arch_name']:
+        model.freeze_module(train=False) ### train MLP module and freeze GNN module
+        MAX_NUM_EDIT_STEPS = 100
+        MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
+
     train_data, whole_data = prepare_dataset(model_config, data, remove_edge_index=False)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
     TRAINER_CLS = BaseTrainer if model_config['arch_name'] == 'MLP' else WholeGraphTrainer
-    trainer = TRAINER_CLS(model=model, 
+    trainer = TRAINER_CLS(args=args,
+                          model=model, 
                           train_data=train_data, 
                           whole_data=whole_data, 
                           model_config=model_config, 
                           output_dir=args.output_dir, 
                           dataset_name=args.dataset, 
                           is_multi_label_task=multi_label, 
-                          amp_mode=False, 
-                          runs=1, 
-                          seed=args.seed,
-                          hyper_diff=args.hyper_Diff,
-                          gamma=args.gamma)
+                          amp_mode=False)
 
     bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
@@ -154,8 +160,12 @@ if __name__ == '__main__':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
+    elif args.manner == 'Ada_GD_Diff':
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
+    elif args.manner == 'EDG':
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_gamma={args.gamma}.json'
     else:
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}_gamma={args.gamma}.json'
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_train_split={args.train_split}_gamma={args.gamma}.json'
 
     with open(json_name, 'w') as f:
         json.dump(summary, f)

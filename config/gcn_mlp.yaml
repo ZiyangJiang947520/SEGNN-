@@ -1,11 +1,11 @@
-name: GCN
+name: GCN_MLP
 norm: true
 loop: true
 
 params:
 
   arxiv:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 3
       hidden_channels: 128
@@ -17,7 +17,7 @@ params:
     epochs: 500
   
   products:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 3
       hidden_channels: 128
@@ -29,7 +29,7 @@ params:
     epochs: 500
   
   reddit:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 256
@@ -42,7 +42,7 @@ params:
 
   
   flickr:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 256
@@ -54,7 +54,7 @@ params:
     epochs: 400
 
   yelp:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 3
       hidden_channels: 512
@@ -66,7 +66,7 @@ params:
     epochs: 500
 
   cora:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -78,7 +78,7 @@ params:
     epochs: 200
 
   citeseer:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -90,7 +90,7 @@ params:
     epochs: 200
 
   pubmed:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -100,9 +100,9 @@ params:
     optim: adam
     lr: 0.01
     epochs: 200
-  
+
   amazoncomputers:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -114,7 +114,7 @@ params:
     epochs: 400
   
   amazonphoto:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -126,7 +126,7 @@ params:
     epochs: 400
   
   coauthorcs:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -138,7 +138,7 @@ params:
     epochs: 400
   
   coauthorphysics:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -150,7 +150,7 @@ params:
     epochs: 400
   
   wikics:
-    arch_name: GCN
+    arch_name: GCN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32

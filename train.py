@@ -16,6 +16,9 @@ parser.add_argument('--seed', default=42, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--runs', default=1, type=int,
                     help='number of runs')
+parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
+parser.add_argument('--gamma', default=1.0, type=float,
+                    help='hyperparameter for kl distance power')
 parser.add_argument('--output_dir', default='./ckpts', type=str)
 
 
@@ -51,8 +54,8 @@ if __name__ == '__main__':
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
     TRAINER_CLS = BaseTrainer if  model_config['arch_name'] == 'MLP' else WholeGraphTrainer
-    trainer = TRAINER_CLS(model, train_data, whole_data, model_config, 
+    trainer = TRAINER_CLS(args, model, train_data, whole_data, model_config, 
                           args.output_dir, args.dataset, multi_label, 
-                          False, args.runs, args.seed)
+                          False)
 
     trainer.train()

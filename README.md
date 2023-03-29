@@ -13,4 +13,6 @@ GPU_NUMBER is the index of GPU to use. For example, ```bash scripts/run_small_da
 
 ```
 bash scripts/eval.sh $GPU_NUMBER
+bash scripts/eval_edg.sh $GPU_NUMBER
+bash scripts/eval_edg_plus.sh $GPU_NUMBER
 ```

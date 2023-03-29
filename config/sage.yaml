@@ -98,3 +98,63 @@ params:
     optim: adam
     lr: 0.01
     epochs: 200
+
+  amazoncomputers:
+    arch_name: SAGE
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+      batch_norm: false
+      residual: false
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  amazonphoto:
+    arch_name: SAGE
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+      batch_norm: false
+      residual: false
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  coauthorcs:
+    arch_name: SAGE
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+      batch_norm: false
+      residual: false
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  coauthorphysics:
+    arch_name: SAGE
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+      batch_norm: false
+      residual: false
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  wikics:
+    arch_name: SAGE
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+      batch_norm: false
+      residual: false
+    optim: adam
+    lr: 0.01
+    epochs: 400

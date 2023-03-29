@@ -16,10 +16,11 @@ from torch_geometric.data.data import Data
 from editable_gnn.models.base import BaseModel
 from editable_gnn.logger import Logger
 from editable_gnn.utils import set_seeds_all, kl_logit, ada_kl_logit
-
+from editable_gnn.edg import EDG, EDG_Plus
 
 class BaseTrainer(object):
     def __init__(self, 
+                 args,
                  model: BaseModel, 
                  train_data: Data, 
                  whole_data: Data,
@@ -27,11 +28,7 @@ class BaseTrainer(object):
                  output_dir: str,
                  dataset_name: str,
                  is_multi_label_task: bool,
-                 amp_mode: bool = False,
-                 runs: int = 10,
-                 seed: int = 0,
-                 hyper_diff: float = 1.0,
-                 gamma: float = 1.0) -> None:
+                 amp_mode: bool = False) -> None:
         self.model = model
         self.train_data = train_data
         self.whole_data = whole_data
@@ -39,17 +36,23 @@ class BaseTrainer(object):
         self.model_name = model_config['arch_name']
         if amp_mode is True:
             raise NotImplementedError
-        self.logger = Logger(runs)
-        self.runs = runs
+        
+        self.runs = args.runs
+        self.logger = Logger(args.runs)
+
+        
         self.optimizer = None
         self.save_path = os.path.join(output_dir, dataset_name)
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
         self.loss_op = F.binary_cross_entropy_with_logits if is_multi_label_task else F.cross_entropy
-        self.seed = seed
 
-        self.hyper_diff = hyper_diff
-        self.gamma = gamma
+        
+        self.seed = args.seed
+
+        self.gamma = args.gamma
+        self.args = args
+        self.hyper_Diff = args.hyper_Diff
 
 
     def train_loop(self,
@@ -111,9 +114,13 @@ class BaseTrainer(object):
     def compute_micro_f1(logits, y, mask=None) -> float:
         if mask is not None:
             logits, y = logits[mask], y[mask]
-
+        # print(f'y={y}')
+        # print(f'logits={logits}')
         if y.dim() == 1:
-            return int(logits.argmax(dim=-1).eq(y).sum()) / y.size(0)
+            try:
+                return int(logits.argmax(dim=-1).eq(y).sum()) / y.size(0)
+            except ZeroDivisionError:
+                return 0.
             
         else:
             y_pred = logits > 0
@@ -254,7 +261,8 @@ class BaseTrainer(object):
             out = model(**input)
             # pdb.set_trace()
             kl_loss = kl_logit(out[self.whole_data.val_mask], out_ori_val)
-            loss = self.loss_op(out[idx], label) + self.hyper_diff * kl_loss
+            # print(f'args={self.args}')
+            loss = self.loss_op(out[idx], label) + self.hyper_Diff * kl_loss
             # pdb.set_trace()
             loss.backward()
             optimizer.step()
@@ -282,7 +290,7 @@ class BaseTrainer(object):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
             out = model(**input)
-            loss = self.loss_op(out[idx], label) + self.hyper_diff * ada_kl_logit(out[self.whole_data.val_mask], out_ori_val, self.gamma)
+            loss = self.loss_op(out[idx], label) + self.hyper_Diff * ada_kl_logit(out[self.whole_data.val_mask], out_ori_val, self.gamma)
             loss.backward()
             optimizer.step()
             y_pred = out[idx].argmax(dim=-1)
@@ -300,14 +308,30 @@ class BaseTrainer(object):
                     break
         return model, success, loss, step
     
+    def EDG_edit(self, model, idx, label, optimizer, max_num_step):
+        edg = EDG(self.model_config, self.loss_op, self.args)
+        model, success, loss, step = edg.update_model(model, self.train_data, self.whole_data, idx, label, optimizer, max_num_step)
+
+        return model, success, loss, step
+    
+    def EDG_Plus_edit(self, model, idx, label, optimizer, max_num_step):
+        edg_plus = EDG_Plus(self.model_config, self.loss_op, self.args)
+        model, success, loss, step = edg_plus.update_model(model, self.train_data, self.whole_data, idx, label, optimizer, max_num_step)
+
+        return model, success, loss, step
+    
     def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD'):
-        assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff']
+        assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus']
         if manner == 'GD':
             return self.single_edit(model, idx, f_label, optimizer, max_num_step)
         elif manner == 'GD_Diff':
             return self.single_Diff_edit(model, idx, f_label, optimizer, max_num_step)
-        else:
+        elif manner == 'Ada_GD_Diff':
             return self.single_Diff_Ada_edit(model, idx, f_label, optimizer, max_num_step)
+        elif manner == 'EDG':
+            return self.EDG_edit(model, idx, f_label, optimizer, max_num_step)
+        else:
+            return self.EDG_Plus_edit(model, idx, f_label, optimizer, max_num_step)
 
 
 
@@ -422,6 +446,7 @@ class BaseTrainer(object):
 
 class WholeGraphTrainer(BaseTrainer):
     def __init__(self, 
+                 args,
                  model: BaseModel, 
                  train_data: Data, 
                  whole_data: Data,
@@ -429,11 +454,7 @@ class WholeGraphTrainer(BaseTrainer):
                  output_dir: str,
                  dataset_name: str,
                  is_multi_label_task: bool,
-                 amp_mode: bool = False,
-                 runs: int = 10,
-                 seed: int = 0,
-                 hyper_diff: float = 1.0,
-                 gamma: float = 1.0) -> None:
+                 amp_mode: bool = False) -> None:
         super(WholeGraphTrainer, self).__init__(
             model=model, 
             train_data=train_data, 
@@ -443,10 +464,7 @@ class WholeGraphTrainer(BaseTrainer):
             dataset_name=dataset_name,
             is_multi_label_task=is_multi_label_task,
             amp_mode=amp_mode,
-            runs=runs,
-            seed=seed,
-            hyper_diff=hyper_diff,
-            gamma=gamma)
+            args=args)
             
 
     def grab_input(self, data: Data):
