@@ -1,5 +1,5 @@
 import os
-import pdb
+import ipdb
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 from copy import deepcopy
@@ -493,4 +493,8 @@ class WholeGraphTrainer(BaseTrainer):
                 if success == 1.:
                     break
         return model, success, loss, step
+    
+
+    def fine_tune_mlp(self):
+        ipdb.set_trace()
     

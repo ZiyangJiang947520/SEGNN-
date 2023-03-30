@@ -104,10 +104,16 @@ if __name__ == '__main__':
                           dataset_name=args.dataset, 
                           is_multi_label_task=multi_label, 
                           amp_mode=False)
+    
+
 
     bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
+
+    # if '_MLP' in model_config['arch_name']:
+    #     trainer.fine_tune_mlp()
+
 
     assert args.criterion in ['wrong2correct', 'random'], 'currently only support selecting nodes with mode ' \
                                                           '``wrong2correct`` or ``random``'
