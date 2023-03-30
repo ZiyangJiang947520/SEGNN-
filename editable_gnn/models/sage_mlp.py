@@ -26,6 +26,7 @@ class SAGE_MLP(BaseGNNModel):
                         out_channels=out_channels, num_layers=num_layers, dropout=dropout,
                         batch_norm=batch_norm, residual=residual)
         
+        self.mlp_freezed = True
         self.freeze_module(train=True)
 
 
@@ -53,12 +54,17 @@ class SAGE_MLP(BaseGNNModel):
         if train:
             self.freeze_layer(self.SAGE, freeze=False)
             self.freeze_layer(self.MLP, freeze=True)
+            self.mlp_freezed = True
         else:
             self.freeze_layer(self.SAGE, freeze=True)
             self.freeze_layer(self.MLP, freeze=False)
+            self.mlp_freezed = False
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args) -> Tensor:
         SAGE_out = self.SAGE(x, adj_t, *args)
-        MLP_out = self.MLP(x, *args)
-        x = SAGE_out + MLP_out
+        if self.mlp_freezed:
+            x = SAGE_out
+        else:   
+            MLP_out = self.MLP(x, *args)
+            x = SAGE_out + MLP_out
         return x

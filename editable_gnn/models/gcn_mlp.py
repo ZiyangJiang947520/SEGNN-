@@ -11,6 +11,7 @@ from .gcn2 import GCN2
 from .sage import SAGE
 from .mlp import MLP
 
+
 class GCN_MLP(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
                  out_channels: int, num_layers: int,
@@ -25,7 +26,8 @@ class GCN_MLP(BaseGNNModel):
         self.MLP = MLP(in_channels=in_channels, hidden_channels=hidden_channels,
                         out_channels=out_channels, num_layers=num_layers, dropout=dropout,
                         batch_norm=batch_norm, residual=residual)
-                        
+        
+        self.mlp_freezed = True
         self.freeze_module(train=True)
 
     def reset_parameters(self):
@@ -52,15 +54,20 @@ class GCN_MLP(BaseGNNModel):
         if train:
             self.freeze_layer(self.GCN, freeze=False)
             self.freeze_layer(self.MLP, freeze=True)
+            self.mlp_freezed = True
         else:
             self.freeze_layer(self.GCN, freeze=True)
             self.freeze_layer(self.MLP, freeze=False)
+            self.mlp_freezed = False
 
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args) -> Tensor:
         GCN_out = self.GCN(x, adj_t, *args)
-        MLP_out = self.MLP(x, *args)
-        x = GCN_out + MLP_out
+        if self.mlp_freezed:
+            x = GCN_out
+        else:   
+            MLP_out = self.MLP(x, *args)
+            x = GCN_out + MLP_out
         return x
 
 # class SAGE_MLP(torch.nn.Module):

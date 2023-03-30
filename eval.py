@@ -17,7 +17,7 @@ parser.add_argument('--config', type=str, required=True,
                     help='the path to the configuration file')
 parser.add_argument('--dataset', type=str, required=True, 
                     help='the name of the applied dataset')
-parser.add_argument('--root', type=str, default='/data/zhimengj/dataset/graphdata')
+parser.add_argument('--root', type=str, default='../data')
 parser.add_argument('--seed', default=42, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--saved_model_path', type=str, required=True,

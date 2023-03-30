@@ -13,7 +13,7 @@ output_dir=./ckpts
 # done
 
 for dataset in yelp; do  ##cora flickr reddit2 amazoncomputers amazonphoto coauthorcs coauthorphysics yelp arxiv products
-for model in sage; do  ## gcn sage mlp gcn_mlp sage_mlp
+for model in mlp gcn_mlp sage_mlp; do  ## gcn sage mlp gcn_mlp sage_mlp
     if ! [ -d "./${output_dir}/${dataset}" ]; then
         mkdir -p "./${output_dir}/${dataset}"
     fi
