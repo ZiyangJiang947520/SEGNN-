@@ -86,11 +86,6 @@ if __name__ == '__main__':
 
     print(model)
     model.cuda()
-    if '_MLP' in model_config['arch_name']:
-        model.freeze_module(train=False) ### train MLP module and freeze GNN module
-        MAX_NUM_EDIT_STEPS = 100
-        MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
-
     train_data, whole_data = prepare_dataset(model_config, data, remove_edge_index=False)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
@@ -110,10 +105,18 @@ if __name__ == '__main__':
     bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
+    
+    if '_MLP' in model_config['arch_name']:
+        model.freeze_module(train=False) ### train MLP module and freeze GNN module
+        MAX_NUM_EDIT_STEPS = 100
+        MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
 
-    # if '_MLP' in model_config['arch_name']:
-    #     trainer.fine_tune_mlp()
+    if '_MLP' in model_config['arch_name']:
+        trainer.finetune_mlp(batch_size=32, iters=100)
 
+    bef_edit_results = trainer.test(model, whole_data)
+    train_acc, valid_acc, test_acc = bef_edit_results
+    print(f'before edit, after fine tune, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
 
     assert args.criterion in ['wrong2correct', 'random'], 'currently only support selecting nodes with mode ' \
                                                           '``wrong2correct`` or ``random``'

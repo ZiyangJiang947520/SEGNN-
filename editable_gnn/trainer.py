@@ -495,6 +495,32 @@ class WholeGraphTrainer(BaseTrainer):
         return model, success, loss, step
     
 
-    def fine_tune_mlp(self):
-        ipdb.set_trace()
-    
+    def reset_mlp(self):
+        for lin in self.model.MLP.lins:
+            lin.weight.data.zero_()
+            lin.bias.data.zero_()
+
+    def finetune_mlp(self, batch_size, iters):
+        input = self.grab_input(self.train_data)
+        self.model.eval()
+        # get the original GNN output embedding
+        self.model.mlp_freezed = True
+        gnn_output = self.model(**input)
+        log_gnn_output = F.log_softmax(gnn_output, dim=-1)
+        # here we enable the MLP to be trained
+        self.model.freeze_module(train=False)
+        opt = self.get_optimizer(self.model_config, self.model)
+        print('start finetuning MLP')
+        for i in tqdm(range(iters)):
+            opt.zero_grad()
+            idx = np.random.choice(self.train_data.num_nodes, batch_size)
+            idx = torch.from_numpy(idx).to(gnn_output.device)
+            MLP_output = self.model.MLP(self.train_data.x[idx])
+            cur_batch_gnn_output = gnn_output[idx]
+            log_prob = F.log_softmax(MLP_output + cur_batch_gnn_output, dim=-1)
+            main_loss = F.cross_entropy(MLP_output + gnn_output[idx], self.train_data.y[idx])
+            kl_loss = F.kl_div(log_prob, log_gnn_output[idx], log_target=True, reduction='batchmean')
+            # import ipdb; ipdb.set_trace()
+            (kl_loss + main_loss).backward()
+            opt.step()
+

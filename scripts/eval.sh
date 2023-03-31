@@ -28,8 +28,8 @@ criterion=wrong2correct
 ## cora flickr reddit2 arxiv amazoncomputers amazonphoto coauthorcs coauthorphysics yelp products
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
-for model in gcn_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
+for dataset in cora flickr reddit2 arxiv; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for model in gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi
