@@ -1,5 +1,7 @@
 from typing import Tuple, Union, Optional
 import time
+import numpy as np
+import os
 import torch
 from torch import Tensor
 import torch_geometric.transforms as T
@@ -196,8 +198,35 @@ def preprocess_data(model_config, data):
         print(f'Done! [{time.perf_counter() - t:.2f}s]')
 
 
-def prepare_dataset(model_config, data, remove_edge_index=True):
+def attack(train_data, data, attack_class, attack_ratio, save_dir, arch_name):
+    # Create a mask to identify the data points with the given attack_class in the training set
+    mask = train_data.y == attack_class
+
+    # Calculate the number of data points to flip the label
+    num_to_flip = int(mask.sum() * attack_ratio)
+    attack_indices = torch.where(mask)[0]
+
+    # Convert the attack_indices in the training set to indices in the whole dataset
+    whole_set_indices = torch.where(data.train_mask)[0]
+    attack_indices_whole_set = whole_set_indices[attack_indices]
+
+    # Randomly select indices of the data points to flip the label
+    indices_to_flip = np.random.choice(attack_indices_whole_set, size=num_to_flip, replace=False)
+    
+    if save_dir:
+        np.save(os.path.join(save_dir, f'{arch_name}_attack_indices.npy'), indices_to_flip)
+    # Flip the label of the selected data points in the training set
+    for index in indices_to_flip:
+        index_in_train_data = np.where(whole_set_indices == index)[0][0]
+        train_data.y[index_in_train_data] = attack_class + 1
+    return train_data
+
+
+def prepare_dataset(model_config, data, args, remove_edge_index=True):
     train_data = to_inductive(data)
+    if hasattr(args, 'attack') and args.attack:
+        train_data = attack(train_data, data, args.attack_class, args.attack_ratio, 
+                            os.path.join(args.output_dir, args.dataset), model_config['arch_name'])
     train_data = T.ToSparseTensor(remove_edge_index=remove_edge_index)(train_data.to('cuda'))
     data = T.ToSparseTensor(remove_edge_index=remove_edge_index)(data.to('cuda'))
     preprocess_data(model_config, train_data)

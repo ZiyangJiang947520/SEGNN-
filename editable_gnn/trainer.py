@@ -50,9 +50,9 @@ class BaseTrainer(object):
         
         self.seed = args.seed
 
-        self.gamma = args.gamma
+        self.gamma = args.gamma if hasattr(args, 'gamma') else 1.0
         self.args = args
-        self.hyper_Diff = args.hyper_Diff
+        self.hyper_Diff = args.hyper_Diff if hasattr(args, 'hyper_Diff') else 0.0
 
 
     def train_loop(self,
@@ -139,12 +139,24 @@ class BaseTrainer(object):
 
 
     @torch.no_grad()
-    def test(self, model: BaseModel, data: Data):
+    def test(self, model: BaseModel, data: Data, specific_class: int = None):
+        model.eval()
         out = self.prediction(model, data)
         y_true = data.y
-        train_acc = self.compute_micro_f1(out, y_true, data.train_mask)
-        valid_acc = self.compute_micro_f1(out, y_true, data.val_mask)
-        test_acc = self.compute_micro_f1(out, y_true, data.test_mask)
+        train_mask = data.train_mask
+        valid_mask = data.val_mask
+        test_mask = data.test_mask
+        if specific_class is not None:
+            mask = data.y == specific_class
+            out = out[mask]
+            y_true = y_true[mask]
+            train_mask = train_mask[mask]
+            valid_mask = valid_mask[mask]
+            test_mask = test_mask[mask]
+
+        train_acc = self.compute_micro_f1(out, y_true, train_mask)
+        valid_acc = self.compute_micro_f1(out, y_true, valid_mask)
+        test_acc = self.compute_micro_f1(out, y_true, test_mask)
         return train_acc, valid_acc, test_acc
 
 
@@ -212,7 +224,8 @@ class BaseTrainer(object):
         if from_valid_set:
             nodes_set = whole_data.val_mask.nonzero().squeeze()
         else:
-            raise NotImplementedError
+            # select from the train set
+            nodes_set = whole_data.train_mask.nonzero().squeeze()
         assert criterion in ['wrong2correct', 'random']
         if criterion == 'wrong2correct':
             wrong_pred_set = val_y_pred.ne(val_y_true).nonzero()
@@ -228,6 +241,7 @@ class BaseTrainer(object):
 
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):
+        model.train()
         for step in range(1, max_num_step + 1):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
@@ -335,7 +349,7 @@ class BaseTrainer(object):
 
 
 
-    def sequential_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD'):
+    def sequential_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD', specific_class=None):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
@@ -343,14 +357,20 @@ class BaseTrainer(object):
         for idx, f_label in tqdm(zip(node_idx_2flip, flipped_label)):
             # edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
             edited_model, success, loss, steps = self.edit_select(model, idx, f_label, optimizer, max_num_step, manner)
-            res = [*self.test(edited_model, whole_data), success, steps]
+            if specific_class is None:
+                res = [*self.test(edited_model, whole_data), success, steps]
+            else:
+                res = [*self.test(edited_model, whole_data), 
+                       *self.test(edited_model, whole_data, specific_class=specific_class), 
+                       success, 
+                       steps]
             # for n_hop in [1, 2]:
             #     res.append(self.get_khop_neighbors_acc(model, n_hop, idx))
             results_temporary.append(res)
         return results_temporary
 
 
-    def independent_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=0, manner='GD'):
+    def independent_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=0, manner='GD', specific_class=None):
         self.model.train()
         results_temporary = []
         for idx, f_label in tqdm(zip(node_idx_2flip, flipped_label)):
@@ -358,7 +378,13 @@ class BaseTrainer(object):
             optimizer = self.get_optimizer(self.model_config, model)
             # edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
             edited_model, success, loss, steps = self.edit_select(model, idx, f_label, optimizer, max_num_step, manner)
-            res = [*self.test(edited_model, whole_data), success, steps]
+            if specific_class is None:
+                res = [*self.test(edited_model, whole_data), success, steps]
+            else:
+                res = [*self.test(edited_model, whole_data), 
+                       *self.test(edited_model, whole_data, specific_class=specific_class), 
+                       success, 
+                       steps]
             hop_res = []
             for n_hop in range(1, num_htop+1):
                 hop_res.append(self.get_khop_neighbors_acc(model, n_hop, idx))
@@ -439,6 +465,72 @@ class BaseTrainer(object):
                     hop_drawdown=hop_drawdown,
                     )
 
+    def eval_edit_generalization_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, 
+                                         bef_edit_cs_results, specific_class, eval_setting, manner='GD'): 
+        bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
+        bef_edit_cs_tra_acc, bef_edit_cs_val_acc, bef_edit_cs_tst_acc = bef_edit_cs_results
+        bef_edit_hop_acc = {}
+        N_HOP = 3
+        for n_hop in range(1, N_HOP + 1):
+            bef_edit_hop_acc[n_hop] = []
+            for idx in node_idx_2flip:
+                bef_edit_hop_acc[n_hop].append(self.get_khop_neighbors_acc(self.model, 1, idx))
+        assert eval_setting in ['sequential', 'independent', 'batch']
+        if eval_setting == 'sequential':
+            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner, 
+                                                     specific_class=specific_class)
+            train_acc, val_acc, test_acc, cs_train_acc, cs_val_acc, cs_test_acc, succeses, steps = zip(*results_temporary)
+            tra_drawdown = bef_edit_tra_acc - train_acc[-1]
+            val_drawdown = bef_edit_val_acc - val_acc[-1]
+            test_drawdown = bef_edit_tst_acc - test_acc[-1]
+            cs_tra_drawdown = bef_edit_cs_tra_acc - cs_train_acc[-1]
+            cs_val_drawdown = bef_edit_cs_val_acc - cs_val_acc[-1]
+            cs_test_drawdown = bef_edit_cs_tst_acc - cs_test_acc[-1]
+            success_rate = succeses[-1]
+            hop_drawdown = {}
+        elif eval_setting == 'independent' :
+            results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, 
+                                                      num_htop=N_HOP, manner=manner, specific_class=specific_class)
+            train_acc, val_acc, test_acc, cs_train_acc, cs_val_acc, cs_test_acc, succeses, steps, hop_acc = zip(*results_temporary)
+            hop_acc = np.vstack(hop_acc)
+            tra_drawdown = bef_edit_tra_acc - np.mean(train_acc)
+            val_drawdown = bef_edit_val_acc - np.mean(val_acc)
+            test_drawdown = bef_edit_tst_acc - np.mean(test_acc)
+            cs_tra_drawdown = bef_edit_cs_tra_acc - np.mean(cs_train_acc)
+            cs_val_drawdown = bef_edit_cs_val_acc - np.mean(cs_val_acc)
+            cs_test_drawdown = bef_edit_cs_tst_acc - np.mean(cs_test_acc)
+            success_rate = np.mean(succeses)
+            hop_drawdown = {}
+            for n_hop in range(1, N_HOP + 1):
+                hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
+        elif eval_setting == 'batch':
+            train_acc, val_acc, test_acc, succeses, steps = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
+            tra_drawdown = bef_edit_tra_acc - train_acc
+            val_drawdown = bef_edit_val_acc - val_acc
+            test_drawdown = bef_edit_tst_acc - test_acc
+            success_rate=succeses,
+            if isinstance(steps, int):
+                steps = [steps]
+            hop_drawdown = {}
+        else:
+            raise NotImplementedError
+        return dict(bef_edit_tra_acc=bef_edit_tra_acc, 
+                    bef_edit_val_acc=bef_edit_val_acc, 
+                    bef_edit_tst_acc=bef_edit_tst_acc,
+                    bef_edit_cs_tra_acc=bef_edit_cs_tra_acc,
+                    bef_edit_cs_val_acc=bef_edit_cs_val_acc,
+                    bef_edit_cs_tst_acc=bef_edit_cs_tst_acc,
+                    cs_train_drawdown=cs_tra_drawdown * 100,
+                    cs_val_drawdown=cs_val_drawdown * 100,
+                    cs_test_drawdown=cs_test_drawdown * 100,
+                    tra_drawdown=tra_drawdown * 100, 
+                    val_drawdown=val_drawdown * 100, 
+                    test_drawdown=test_drawdown * 100, 
+                    success_rate=success_rate,
+                    mean_complexity=np.mean(steps),
+                    hop_drawdown=hop_drawdown,
+                    )
+    
 
     def grab_input(self, data: Data, indices=None):
         return {"x": data.x}

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import yaml
 import editable_gnn.models as models
 from data import get_data, prepare_dataset
-from editable_gnn import set_seeds_all, ModelConfig, WholeGraphEditor, BaseTrainer, EnnConfig, ENN
+from editable_gnn import set_seeds_all, WholeGraphEditor, BaseTrainer, EnnConfig, ENN
 
 
 parser = argparse.ArgumentParser()
@@ -27,13 +27,25 @@ parser.add_argument('--seed', default=42, type=int,
 parser.add_argument('--saved_model_path', type=str, required=True,
                     help='the path to the traiend model')
 parser.add_argument('--output_dir', default='./finetune', type=str)
-
+parser.add_argument('--runs', default=1, type=int,
+                    help='number of runs')
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
     set_seeds_all(args.seed)
-    model_config = ModelConfig.from_directory(args.config, args.dataset)
+    with open(args.config, 'r') as fp:
+        model_config = yaml.load(fp, Loader=yaml.FullLoader)
+        name = model_config['name']
+        loop = model_config.get('loop', False)
+        normalize = model_config.get('norm', False)
+        if args.dataset == 'reddit2':
+            model_config = model_config['params']['reddit']
+        else:
+            model_config = model_config['params'][args.dataset]
+        model_config['name'] = name
+        model_config['loop'] = loop
+        model_config['normalize'] = normalize
     enn_config = EnnConfig.from_directory(args.alg_config)
     print(args)
     print(f'model config: {model_config}')
@@ -50,21 +62,19 @@ if __name__ == '__main__':
     print(model)
     model.cuda()
     enn = ENN(model, enn_config, lambda: copy.deepcopy(model)).cuda()
-    train_data, whole_data = prepare_dataset(model_config, data, remove_edge_index=False)
+    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=False)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
     TRAINER_CLS = BaseTrainer if model_config['arch_name'] == 'MLP' else WholeGraphEditor
-    trainer = TRAINER_CLS(model=enn, 
+    trainer = TRAINER_CLS(args=args,
+                          model=enn, 
                           train_data=train_data, 
                           whole_data=whole_data, 
                           model_config=model_config, 
                           output_dir=args.output_dir, 
                           dataset_name=args.dataset, 
                           is_multi_label_task=multi_label, 
-                          amp_mode=False, 
-                          runs=1, 
-                          seed=args.seed)
-    
+                          amp_mode=False)
     trainer.run()
 
     trainer.save_model(f"{trainer.model_name}", enn.config.n_epochs)

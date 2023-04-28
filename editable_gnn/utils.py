@@ -79,3 +79,23 @@ def check_numpy(x):
     x = np.asarray(x)
     assert isinstance(x, np.ndarray)
     return x
+
+
+def safe_backward(loss, parameters, accumulate=1, allow_unused=False):
+    parameters = list(parameters)  # Capture the generator output
+    grads = torch.autograd.grad(loss, parameters, allow_unused=allow_unused)
+    nan, inf = False, False
+    for g in grads:
+        if g is not None:
+            nan |= g.isnan().any().item()
+            inf |= g.isinf().any().item()
+
+    if not (nan or inf):
+        for p, g in zip(parameters, grads):
+            if g is None:
+                continue
+
+            if p.grad is None:
+                p.grad = g / accumulate
+            else:
+                p.grad += g / accumulate

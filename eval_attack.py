@@ -23,16 +23,12 @@ parser.add_argument('--seed', default=42, type=int,
 parser.add_argument('--saved_model_path', type=str, required=True,
                     help='the path to the traiend model')
 parser.add_argument('--output_dir', default='./finetune', type=str)
-parser.add_argument('--num_samples', default=50, type=int)
 parser.add_argument('--runs', default=1, type=int,
                     help='number of runs')
-parser.add_argument('--criterion', type=str, required=True, help='the criterion of how to select the node need to be patched.' \
-                                                                  'currently only support ``wrong_to_correct`` and ``random``')
+parser.add_argument('--attack_indices_path', type=str, required=True, help='path to the indices of the nodes need to be patched')
+parser.add_argument('--attack_class', type=int, required=True, help='the class of the nodes need to be patched')
 parser.add_argument('--manner', type=str, required=True, default='GD', \
                     choices=['GD','GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus'], help='edit manner for finetuning')
-parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
-parser.add_argument('--train_split', default=1, type=int, help='Training data split number for EDG_Plus')
-parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
 
 MAX_NUM_EDIT_STEPS = 10
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 20
@@ -70,6 +66,8 @@ if __name__ == '__main__':
 
     print(model)
     model.cuda()
+    # here we only need to load the clean data
+    args.attack = False
     train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=False)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
@@ -83,83 +81,86 @@ if __name__ == '__main__':
                           dataset_name=args.dataset, 
                           is_multi_label_task=multi_label, 
                           amp_mode=False)
-    
-
 
     bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
-    
+    bef_edit_results = trainer.test(model, whole_data, specific_class=args.attack_class)
+    train_acc, valid_acc, test_acc = bef_edit_results
+    print(f'before edit, attacked class {args.attack_class} train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
+    attack_indices = torch.from_numpy(np.load(args.attack_indices_path)).reshape(-1, 1)
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
-        MAX_NUM_EDIT_STEPS = 200
+        MAX_NUM_EDIT_STEPS = 100
         MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
-        # IMPORTANT NOTE: here we found that batch size is crusial for fine-tuning GCN_MLP on reddit2! Large batch size matters.
-        if args.dataset == 'flickr' or (args.dataset == 'reddit2' and model_config['arch_name'] == 'GCN_MLP'):
-            trainer.finetune_mlp(batch_size=512, iters=100)
-        else:
-            trainer.finetune_mlp(batch_size=32, iters=100)
-        bef_edit_ft_results = trainer.test(model, whole_data)
-        ft_train_acc, ft_valid_acc, ft_test_acc = bef_edit_ft_results
-        print(f'before edit, after fine tune, train acc {ft_train_acc}, valid acc {ft_valid_acc}, test acc {ft_test_acc}')
+        trainer.finetune_mlp(batch_size=32, iters=100)
+        bef_edit_results = trainer.test(model, whole_data)
+        train_acc, valid_acc, test_acc = bef_edit_results
+        print(f'before edit, after fine tune, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
+        cs_bef_edit_results = trainer.test(model, whole_data, specific_class=args.attack_class)
+        cs_train_acc, cs_valid_acc, cs_test_acc = bef_edit_results
+        print(f'before edit, after fine tune, attacked class {args.attack_class} \
+              train acc {cs_train_acc}, valid acc {cs_valid_acc}, test acc {cs_test_acc}')
 
-    assert args.criterion in ['wrong2correct', 'random'], 'currently only support selecting nodes with mode ' \
-                                                          '``wrong2correct`` or ``random``'
-    node_idx_2flip, flipped_label = trainer.select_node(whole_data=whole_data, 
-                                                        num_classes=num_classes, 
-                                                        num_samples=args.num_samples, 
-                                                        criterion=args.criterion, 
-                                                        from_valid_set=True)
+    # args.criterion = 'wrong2correct'
+    # assert args.criterion in ['wrong2correct', 'random'], 'currently only support selecting nodes with mode ' \
+    #                                                       '``wrong2correct`` or ``random``'
+    # node_idx_2flip, flipped_label = trainer.select_node(whole_data=whole_data, 
+    #                                                     num_classes=num_classes, 
+    #                                                     num_samples=args.num_samples, 
+    #                                                     criterion=args.criterion, 
+    #                                                     from_valid_set=True)
                                                         
-    node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
-
-    print(f'the calculated stats averaged over {args.num_samples} sequential edit '
+    # node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
+    node_idx_2flip = attack_indices.cuda()
+    flipped_label = torch.ones_like(node_idx_2flip) * args.attack_class
+    flipped_label = flipped_label.long().cuda()
+    print(f'the calculated stats averaged over {flipped_label.shape[0]} sequential edit '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
-    seq_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip, 
+    seq_results = trainer.eval_edit_generalization_quality(node_idx_2flip=node_idx_2flip, 
                                         flipped_label=flipped_label, 
                                         whole_data=whole_data, 
                                         max_num_step=MAX_NUM_EDIT_STEPS, 
                                         bef_edit_results=bef_edit_results, 
+                                        bef_edit_cs_results=cs_bef_edit_results,
+                                        specific_class=args.attack_class,
                                         eval_setting='sequential',
                                         manner=args.manner)
     print(seq_results)
 
-    print(f'the calculated stats after {args.num_samples} independent edit '
+    print(f'the calculated stats after {flipped_label.shape[0]} independent edit '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
-    ind_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip, 
+    ind_results = trainer.eval_edit_generalization_quality(node_idx_2flip=node_idx_2flip, 
                                         flipped_label=flipped_label, 
                                         whole_data=whole_data, 
                                         max_num_step=MAX_NUM_EDIT_STEPS, 
                                         bef_edit_results=bef_edit_results, 
+                                        bef_edit_cs_results=cs_bef_edit_results,
+                                        specific_class=args.attack_class,
                                         eval_setting='independent',
                                         manner=args.manner)
     print(ind_results)
 
-    print(f'the calculated stats after batch edit with batch size {args.num_samples}, '
-            f'max allocated steps: {MAX_NUM_EDIT_STEPS_FOR_BATCH}')
-    batch_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip, 
-                                        flipped_label=flipped_label, 
-                                        whole_data=whole_data, 
-                                        max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH, 
-                                        bef_edit_results=bef_edit_results, 
-                                        eval_setting='batch',
-                                        manner=args.manner)
-    print(batch_results)
+    # print(f'the calculated stats after batch edit with batch size {args.num_samples}, '
+    #         f'max allocated steps: {MAX_NUM_EDIT_STEPS_FOR_BATCH}')
+    # batch_results = trainer.eval_edit_generalization_quality(node_idx_2flip=node_idx_2flip, 
+    #                                     flipped_label=flipped_label, 
+    #                                     whole_data=whole_data, 
+    #                                     max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH, 
+    #                                     bef_edit_results=bef_edit_results, 
+    #                                     bef_edit_cs_results=cs_bef_edit_results,
+    #                                     specific_class=args.attack_class,
+    #                                     eval_setting='batch',
+    #                                     manner=args.manner)
+    # print(batch_results)
     summary = {'seq_edit': seq_results, 
                'ind_edit': ind_results, 
-               'batch_edit': batch_results,
                'model_config': model_config}
     root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'  
     if args.manner == 'GD':
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
-    elif args.manner == 'GD_Diff':
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
-    elif args.manner == 'Ada_GD_Diff':
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
-    elif args.manner == 'EDG':
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_gamma={args.gamma}.json'
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_eval.json'
     else:
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_train_split={args.train_split}_gamma={args.gamma}.json'
-
+        raise NotImplementedError
+    
     with open(json_name, 'w') as f:
         json.dump(summary, f)

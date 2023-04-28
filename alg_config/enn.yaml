@@ -6,5 +6,5 @@ first_order: false
 cedit: 0.1
 cloc: 10
 epochs: 50
-model:
-  inner_params: ["convs.1.weight", "convs.1.bias"]
+# model:
+#   inner_params: ["convs.1.weight", "convs.1.bias"]

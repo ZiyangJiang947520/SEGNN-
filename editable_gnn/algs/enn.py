@@ -32,7 +32,7 @@ class ENN(EditableModel):
         super().__init__(model, config, model_constructor)
 
         if edit_lrs is None:
-            edit_lrs = nn.Parameter(torch.tensor([config.edit_lr] * len(self.config.model['inner_params'])))
+            edit_lrs = nn.Parameter(torch.tensor([config.edit_lr]))
         self.edit_lrs = edit_lrs
 
         self.grad_callback = fomaml_callback if config.first_order else lambda x: x
@@ -49,7 +49,7 @@ class ENN(EditableModel):
     def edit(self, x, adj_t, edit_batch, loss_op):
         label = edit_batch['label']
         opt = torch.optim.SGD([{"params": p, "lr": self.config.edit_lr}
-                               for (n, p) in self.model.named_parameters() if n in self.config.model['inner_params']])
+                               for (n, p) in self.model.named_parameters()])
         with torch.enable_grad(), higher.innerloop_ctx(
                 self.model,
                 opt,

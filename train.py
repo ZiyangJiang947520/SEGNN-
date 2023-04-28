@@ -1,5 +1,5 @@
 import argparse
-import pdb
+import ipdb
 import yaml
 import editable_gnn.models as models
 from data import get_data, prepare_dataset
@@ -16,11 +16,12 @@ parser.add_argument('--seed', default=42, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--runs', default=1, type=int,
                     help='number of runs')
-parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
-parser.add_argument('--gamma', default=1.0, type=float,
-                    help='hyperparameter for kl distance power')
 parser.add_argument('--output_dir', default='./ckpts', type=str)
-
+parser.add_argument('--attack', action='store_true')
+parser.add_argument('--attack_class', type=int, default=0, 
+                    help='the class of nodes to be attacked')
+parser.add_argument('--attack_ratio', type=float, default=0.1, 
+                    help='the ratio of attacked nodes')
 
 
 if __name__ == '__main__':
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     model = MODEL_FAMILY(in_channels=num_features, out_channels=num_classes, **model_config['architecture'])
     model.cuda()
     print(model)
-    train_data, whole_data = prepare_dataset(model_config, data, remove_edge_index=True)
+    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=True)
     del data
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')

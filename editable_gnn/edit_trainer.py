@@ -12,11 +12,11 @@ from .utils import safe_backward
 
 
 class WholeGraphEditor(WholeGraphTrainer):
-    def __init__(self, model: ENN, train_data: Data, whole_data: Data, 
+    def __init__(self, args, model: ENN, train_data: Data, whole_data: Data, 
                  model_config: Dict, output_dir: str, dataset_name: str, is_multi_label_task: bool, 
-                 amp_mode: bool = False, runs: int = 10, seed: int = 0) -> None:
-        super().__init__(model, train_data, whole_data, model_config, output_dir, 
-                         dataset_name, is_multi_label_task, amp_mode, runs, seed)
+                 amp_mode: bool = False) -> None:
+        super().__init__(args, model, train_data, whole_data, model_config, output_dir, 
+                         dataset_name, is_multi_label_task, amp_mode)
         
         self.original_model = self.model.model
         self.edit_gen = self.batch_generator()

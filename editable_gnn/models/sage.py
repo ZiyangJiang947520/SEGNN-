@@ -28,7 +28,8 @@ class SAGE(BaseGNNModel):
                 
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args, **kwargs) -> Tensor:
-        for idx, conv in enumerate(self.convs[:-1]):
+        for idx in range(self.num_layers - 1):
+            conv = self.convs[idx]
             h = conv(x, adj_t)
             if self.use_linear:
                 linear = self.lins[idx](x)
