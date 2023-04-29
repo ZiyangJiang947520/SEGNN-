@@ -34,11 +34,22 @@ class BaseModel(torch.nn.Module):
     def from_pretrained(cls, in_channels: int, out_channels: int, saved_ckpt_path: str, **kwargs):
         model = cls(in_channels=in_channels, out_channels=out_channels, **kwargs)
         if not saved_ckpt_path.endswith('.pt'):
-            glob_checkpoints = [str(x) for x in Path(saved_ckpt_path).glob(f"{cls.__name__}_run*.pt")]
+            glob_checkpoints = [str(x) for x in Path(saved_ckpt_path).glob(f"{cls.__name__}_*.pt")]
             assert len(glob_checkpoints) == 1
             saved_ckpt_path = glob_checkpoints[0]
         print(f'load model weights from {saved_ckpt_path}')
-        model.load_state_dict(torch.load(saved_ckpt_path, map_location='cpu'))
+        state_dict = torch.load(saved_ckpt_path, map_location='cpu')
+        final_state_dict = {}
+        ignore_keys = ['edit_lrs']
+        for k, v in state_dict.items():
+            if k in ignore_keys:
+                continue
+            if k.startswith('model'):
+                new_k = k.split('model.')[1]
+                final_state_dict[new_k] = v
+            else:
+                final_state_dict[k] = v
+        model.load_state_dict(final_state_dict, strict=False)
         return model
 
 

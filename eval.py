@@ -1,8 +1,7 @@
 import argparse
 import torch
-import shutil
+import os
 import numpy as np
-import random
 import pdb
 import json
 import torch.nn.functional as F
@@ -34,8 +33,8 @@ parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperpara
 parser.add_argument('--train_split', default=1, type=int, help='Training data split number for EDG_Plus')
 parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
 
-MAX_NUM_EDIT_STEPS = 10
-MAX_NUM_EDIT_STEPS_FOR_BATCH = 20
+MAX_NUM_EDIT_STEPS = 200
+MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
 
 
 if __name__ == '__main__':
@@ -150,6 +149,8 @@ if __name__ == '__main__':
                'batch_edit': batch_results,
                'model_config': model_config}
     root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'  
+    if not os.path.exists(root_json):
+        os.makedirs(root_json)
     if args.manner == 'GD':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':

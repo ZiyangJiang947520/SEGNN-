@@ -3,7 +3,7 @@ output_dir=./ckpts/enn_ft
 criterion=wrong2correct
 
 
-for dataset in arxiv flickr arxiv products; do
+for dataset in reddit2; do
 for model in sage gcn; do
     if ! [ -d "./${output_dir}/${dataset}" ]; then
         mkdir -p "./${output_dir}/${dataset}"
