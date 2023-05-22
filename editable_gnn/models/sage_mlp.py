@@ -28,6 +28,7 @@ class SAGE_MLP(BaseGNNModel):
         
         self.mlp_freezed = True
         self.freeze_module(train=True)
+        self.gnn_output = None
 
 
     def reset_parameters(self):
@@ -68,3 +69,8 @@ class SAGE_MLP(BaseGNNModel):
             MLP_out = self.MLP(x, *args)
             x = SAGE_out + MLP_out
         return x
+
+    def fast_forward(self, x: Tensor, idx) -> Tensor:
+        assert self.gnn_output is not None
+        assert not self.mlp_freezed
+        return self.gnn_output[idx].to(x.device) + self.MLP(x)

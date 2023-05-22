@@ -29,6 +29,7 @@ class GCN_MLP(BaseGNNModel):
         
         self.mlp_freezed = True
         self.freeze_module(train=True)
+        self.gnn_output = None
 
     def reset_parameters(self):
         ### reset GCN parameters
@@ -60,6 +61,11 @@ class GCN_MLP(BaseGNNModel):
             self.freeze_layer(self.MLP, freeze=False)
             self.mlp_freezed = False
 
+
+    def fast_forward(self, x: Tensor, idx) -> Tensor:
+        assert self.gnn_output is not None
+        assert not self.mlp_freezed
+        return self.gnn_output[idx].to(x.device) + self.MLP(x)
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args) -> Tensor:
         GCN_out = self.GCN(x, adj_t, *args)

@@ -60,7 +60,10 @@ class ENN(EditableModel):
         ) as (fmodel, diffopt):
             fmodel.eval()
             for edit_step in range(self.config.n_edit_steps):
-                output = fmodel(x, adj_t)[edit_batch['idx']]
+                if adj_t is None:
+                    output = fmodel(x)[edit_batch['idx']]
+                else:
+                    output = fmodel(x, adj_t)[edit_batch['idx']]
                 if len(label.shape) == 2:
                     label = label.squeeze()
                 loss = loss_op(output, label)

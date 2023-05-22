@@ -1,5 +1,5 @@
-save_dir_root=./ckpts/enn_ft
-output_dir=./finetune_new/enn_ft
+save_dir_root=./ckpts
+output_dir=./finetune_new_std
 criterion=wrong2correct
 
 
@@ -20,8 +20,9 @@ criterion=wrong2correct
 ## cora flickr reddit2 arxiv amazoncomputers amazonphoto coauthorcs coauthorphysics yelp products
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in flickr arxiv reddit2; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
-for model in  gcn sage; do ###gcn sage mlp gcn_mlp sage_mlp
+for dataset in amazoncomputers amazonphoto coauthorcs coauthorphysics; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+# for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for model in  gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi
@@ -33,6 +34,5 @@ for model in  gcn sage; do ###gcn sage mlp gcn_mlp sage_mlp
         --manner ${manner} \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
-wait
 done
 done

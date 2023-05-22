@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import yaml
 import editable_gnn.models as models
 from data import get_data, prepare_dataset
-from editable_gnn import set_seeds_all, WholeGraphEditor, BaseTrainer, EnnConfig, ENN
+from editable_gnn import set_seeds_all, WholeGraphEditor, BaseEditor, EnnConfig, ENN
 
 
 parser = argparse.ArgumentParser()
@@ -65,7 +65,8 @@ if __name__ == '__main__':
     train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=False)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
-    TRAINER_CLS = BaseTrainer if model_config['arch_name'] == 'MLP' else WholeGraphEditor
+    # TRAINER_CLS = BaseTrainer if model_config['arch_name'] == 'MLP' else WholeGraphEditor
+    TRAINER_CLS = BaseEditor if model_config['arch_name'] == 'MLP' else WholeGraphEditor
     trainer = TRAINER_CLS(args=args,
                           model=enn, 
                           train_data=train_data, 

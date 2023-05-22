@@ -1,4 +1,5 @@
 import os
+import time
 import ipdb
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from pathlib import Path
@@ -242,6 +243,8 @@ class BaseTrainer(object):
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):
         model.train()
+        s = time.time()
+        torch.cuda.synchronize()
         for step in range(1, max_num_step + 1):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
@@ -263,6 +266,9 @@ class BaseTrainer(object):
                 success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
                     break
+        torch.cuda.synchronize()
+        e = time.time()
+        print(f'edit time: {e - s}')
         return model, success, loss, step
 
     def single_Diff_edit(self, model, idx, label, optimizer, max_num_step):       
@@ -385,6 +391,8 @@ class BaseTrainer(object):
                        *self.test(edited_model, whole_data, specific_class=specific_class), 
                        success, 
                        steps]
+            # import ipdb; ipdb.set_trace()
+            # torch.save(edited_model.state_dict(), 'cora_gcn_mlp.pt')
             hop_res = []
             for n_hop in range(1, num_htop+1):
                 hop_res.append(self.get_khop_neighbors_acc(model, n_hop, idx))
@@ -429,6 +437,10 @@ class BaseTrainer(object):
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
             test_drawdown = bef_edit_tst_acc - test_acc[-1]
+            tra_std = None
+            val_std = None
+            test_std = None
+
             success_rate = succeses[-1]
             hop_drawdown = {}
         elif eval_setting == 'independent' :
@@ -438,6 +450,9 @@ class BaseTrainer(object):
             tra_drawdown = bef_edit_tra_acc - np.mean(train_acc)
             val_drawdown = bef_edit_val_acc - np.mean(val_acc)
             test_drawdown = bef_edit_tst_acc - np.mean(test_acc)
+            tra_std = np.std(train_acc)
+            val_std = np.std(val_acc)
+            test_std = np.std(test_acc)
             success_rate = np.mean(succeses)
             hop_drawdown = {}
             for n_hop in range(1, N_HOP + 1):
@@ -448,6 +463,9 @@ class BaseTrainer(object):
             tra_drawdown = bef_edit_tra_acc - train_acc
             val_drawdown = bef_edit_val_acc - val_acc
             test_drawdown = bef_edit_tst_acc - test_acc
+            tra_std = None
+            val_std = None
+            test_std = None
             success_rate=succeses,
             if isinstance(steps, int):
                 steps = [steps]
@@ -460,6 +478,9 @@ class BaseTrainer(object):
                     tra_drawdown=tra_drawdown * 100, 
                     val_drawdown=val_drawdown * 100, 
                     test_drawdown=test_drawdown * 100, 
+                    tra_std=tra_std,
+                    val_std=val_std,
+                    test_std=test_std,
                     success_rate=success_rate,
                     mean_complexity=np.mean(steps),
                     hop_drawdown=hop_drawdown,
@@ -564,14 +585,23 @@ class WholeGraphTrainer(BaseTrainer):
 
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):
+        s = time.time()
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize()
         for step in range(1, max_num_step + 1):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
-            out = model(**input)
-            loss = self.loss_op(out[idx], label)
+            if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+                out = model.fast_forward(input['x'][idx], idx)
+                loss = self.loss_op(out, label)
+                y_pred = out.argmax(dim=-1)
+            else:
+                out = model(**input)
+                loss = self.loss_op(out[idx], label)
+                y_pred = out.argmax(dim=-1)[idx]
             loss.backward()
             optimizer.step()
-            y_pred = out.argmax(dim=-1)[idx]
             # sequential or independent setting
             if label.shape[0] == 1:
                 if y_pred == label:
@@ -584,6 +614,10 @@ class WholeGraphTrainer(BaseTrainer):
                 success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
                     break
+        torch.cuda.synchronize()
+        e = time.time()
+        print(f'max allocated mem: {torch.cuda.max_memory_allocated() / (1024**2)} MB')
+        print(f'edit time: {e - s}')
         return model, success, loss, step
     
 
@@ -597,12 +631,16 @@ class WholeGraphTrainer(BaseTrainer):
         self.model.eval()
         # get the original GNN output embedding
         self.model.mlp_freezed = True
-        gnn_output = self.model(**input)
-        log_gnn_output = F.log_softmax(gnn_output, dim=-1)
+        with torch.no_grad():
+            gnn_output = self.model(**input)
+            self.model.gnn_output = self.model(**self.grab_input(self.whole_data)).cpu()
+            log_gnn_output = F.log_softmax(gnn_output, dim=-1)
         # here we enable the MLP to be trained
         self.model.freeze_module(train=False)
         opt = self.get_optimizer(self.model_config, self.model)
         print('start finetuning MLP')
+        s = time.time()
+        torch.cuda.synchronize()
         for i in tqdm(range(iters)):
             opt.zero_grad()
             idx = np.random.choice(self.train_data.num_nodes, batch_size)
@@ -615,4 +653,6 @@ class WholeGraphTrainer(BaseTrainer):
             # import ipdb; ipdb.set_trace()
             (kl_loss + main_loss).backward()
             opt.step()
-
+        torch.cuda.synchronize()
+        e = time.time()
+        print(f'fine tune MLP used: {e - s} sec.')

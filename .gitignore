@@ -5,3 +5,8 @@ ckpts
 finetune*
 attack
 latexs
+tsne.py
+tsne.sh
+tsne_results
+*.pt
+saved_edited_models

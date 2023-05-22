@@ -91,10 +91,11 @@ if __name__ == '__main__':
     
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
-        MAX_NUM_EDIT_STEPS = 200
-        MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
+        MAX_NUM_EDIT_STEPS = 500
+        MAX_NUM_EDIT_STEPS_FOR_BATCH = 500
         # IMPORTANT NOTE: here we found that batch size is crusial for fine-tuning GCN_MLP on reddit2! Large batch size matters.
-        if args.dataset == 'flickr' or (args.dataset == 'reddit2' and model_config['arch_name'] == 'GCN_MLP'):
+        if args.dataset == 'flickr' or (args.dataset == 'reddit2' and model_config['arch_name'] == 'GCN_MLP') or \
+            (args.dataset in ['amazoncomputers', 'amazonphoto', 'coauthorcs', 'coauthorphysics']):
             trainer.finetune_mlp(batch_size=512, iters=100)
         else:
             trainer.finetune_mlp(batch_size=32, iters=100)
