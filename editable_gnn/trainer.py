@@ -115,8 +115,6 @@ class BaseTrainer(object):
     def compute_micro_f1(logits, y, mask=None) -> float:
         if mask is not None:
             logits, y = logits[mask], y[mask]
-        # print(f'y={y}')
-        # print(f'logits={logits}')
         if y.dim() == 1:
             try:
                 return int(logits.argmax(dim=-1).eq(y).sum()) / y.size(0)
@@ -154,7 +152,6 @@ class BaseTrainer(object):
             train_mask = train_mask[mask]
             valid_mask = valid_mask[mask]
             test_mask = test_mask[mask]
-
         train_acc = self.compute_micro_f1(out, y_true, train_mask)
         valid_acc = self.compute_micro_f1(out, y_true, valid_mask)
         test_acc = self.compute_micro_f1(out, y_true, test_mask)
@@ -581,7 +578,14 @@ class WholeGraphTrainer(BaseTrainer):
             
 
     def grab_input(self, data: Data):
-        return {"x": data.x, 'adj_t': data.adj_t}
+        x = data.x
+        i = 1
+        xs = [x]
+        # for SIGN
+        while hasattr(data, f'x{i}'):
+            xs.append(getattr(data, f'x{i}'))
+            i += 1
+        return {"x": data.x, 'adj_t': data.adj_t, 'xs': xs}
 
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):

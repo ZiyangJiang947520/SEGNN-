@@ -43,15 +43,3 @@ class MLP(BaseModel):
             x = self.dropout(x)
         x = self.lins[-1](x, *args, **kwargs)
         return x
-
-        # for idx, lin in enumerate(self.lins[:-1]):
-        #     h = lin(x, *args, **kwargs)
-        #     if self.batch_norm:
-        #         # import pdb; pdb.set_trace()
-        #         h = self.bns[idx](h)
-        #     if self.residual and h.size(-1) == x.size(-1):
-        #         h += x[:h.size(0)]
-        #     x = self.activation(h)
-        #     x = self.dropout(x)
-        # x = self.lins[-1](x, *args, **kwargs)
-        # return x

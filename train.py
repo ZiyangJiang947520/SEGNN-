@@ -46,11 +46,22 @@ if __name__ == '__main__':
     else:
         multi_label = False
     MODEL_FAMILY = getattr(models, model_config['arch_name'])
-    data, num_features, num_classes = get_data(args.root, args.dataset)
+    # SIGN is special. It requries adding features before training the model.
+    if model_config['arch_name'] in ['SIGN']:
+        sign_transform = True
+        sign_k = model_config['architecture']['num_layers']
+    else:
+        sign_transform = False
+        sign_k = None
+    data, num_features, num_classes = get_data(args.root, args.dataset, sign_transform=sign_transform, sign_k=sign_k)
     model = MODEL_FAMILY(in_channels=num_features, out_channels=num_classes, **model_config['architecture'])
     model.cuda()
     print(model)
-    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=True)
+    if model_config['arch_name'] in ['SGC']:
+        to_inductive = False
+    else:
+        to_inductive = True
+    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=True, inductive=to_inductive)
     del data
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')

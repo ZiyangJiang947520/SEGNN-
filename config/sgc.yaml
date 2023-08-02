@@ -1,0 +1,110 @@
+name: SGC
+norm: true
+loop: true
+
+params:
+
+  arxiv:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.01
+    epochs: 500
+  
+  products:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.002
+    epochs: 500
+  
+  reddit:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.01
+    epochs: 400
+
+  
+  flickr:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 400
+
+  yelp:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.01
+    epochs: 500
+
+  cora:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 200
+
+  citeseer:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 200
+
+  pubmed:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 200
+  
+  amazoncomputers:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 400
+  
+  amazonphoto:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 400
+  
+  coauthorcs:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 400
+  
+  coauthorphysics:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 400
+  
+  wikics:
+    arch_name: SGC
+    architecture:
+      num_layers: 2
+    optim: adam
+    lr: 0.1
+    epochs: 400

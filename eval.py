@@ -69,7 +69,11 @@ if __name__ == '__main__':
 
     print(model)
     model.cuda()
-    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=False)
+    if model_config['arch_name'] in ['SGC']:
+        to_inductive = False
+    else:
+        to_inductive = True
+    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=False, inductive=to_inductive)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
     TRAINER_CLS = BaseTrainer if model_config['arch_name'] == 'MLP' else WholeGraphTrainer

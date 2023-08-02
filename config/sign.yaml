@@ -1,0 +1,126 @@
+name: SIGN
+norm: false
+loop: false
+
+params:
+
+  arxiv:
+    arch_name: SIGN
+    architecture:
+      num_layers: 3
+      hidden_channels: 128
+      dropout: 0.5
+    optim: adam
+    lr: 0.01
+    epochs: 500
+  
+  reddit:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 256
+      dropout: 0.5
+    optim: adam
+    lr: 0.01
+    epochs: 400
+
+  
+  flickr:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 256
+      dropout: 0.3
+    optim: adam
+    lr: 0.01
+    epochs: 400
+
+  yelp:
+    arch_name: SIGN
+    architecture:
+      num_layers: 3
+      hidden_channels: 512
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 500
+
+  cora:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 200
+
+  citeseer:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 200
+
+  pubmed:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 200
+  
+  amazoncomputers:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  amazonphoto:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  coauthorcs:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  coauthorphysics:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 400
+  
+  wikics:
+    arch_name: SIGN
+    architecture:
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
+    optim: adam
+    lr: 0.01
+    epochs: 400

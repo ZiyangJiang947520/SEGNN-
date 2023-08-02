@@ -2,6 +2,7 @@ from typing import Tuple, Union, Optional
 import time
 import numpy as np
 import os
+import copy
 import torch
 from torch import Tensor
 import torch_geometric.transforms as T
@@ -49,15 +50,19 @@ def index2mask(idx: Tensor, size: int) -> Tensor:
     return mask
 
 
-def get_planetoid(root: str, name: str) -> Tuple[Data, int, int]:
-    transform = T.Compose([T.NormalizeFeatures(),  
-                           T.AddTrainValTestMask('train_rest', num_val=500, num_test=500)])
+def get_planetoid(root: str, name: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    transform = T.Compose([T.NormalizeFeatures(), T.SIGN(sign_K), 
+                           T.RandomNodeSplit('train_rest', num_val=500, num_test=500)])
     dataset = Planetoid(f'{root}/Planetoid', name, transform=transform)
     return dataset[0], dataset.num_features, dataset.num_classes
 
 
-def get_wikics(root: str) -> Tuple[Data, int, int]:
-    dataset = WikiCS(f'{root}/WIKICS')
+def get_wikics(root: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = WikiCS(f'{root}/WIKICS', transform=transform)
     data = dataset[0]
     data.adj_t = data.adj_t.to_symmetric()
     data.val_mask = data.stopping_mask
@@ -65,8 +70,12 @@ def get_wikics(root: str) -> Tuple[Data, int, int]:
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_coauthor(root: str, name: str) -> Tuple[Data, int, int]:
-    dataset = Coauthor(f'{root}/Coauthor', name)
+def get_coauthor(root: str, name: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = Coauthor(f'{root}/Coauthor', name, transform=transform)
     data = dataset[0]
     torch.manual_seed(12345)
     data.train_mask, data.val_mask, data.test_mask = gen_masks(
@@ -74,8 +83,12 @@ def get_coauthor(root: str, name: str) -> Tuple[Data, int, int]:
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_amazon(root: str, name: str) -> Tuple[Data, int, int]:
-    dataset = Amazon(f'{root}/Amazon', name)
+def get_amazon(root: str, name: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = Amazon(f'{root}/Amazon', name, transform=transform)
     data = dataset[0]
     torch.manual_seed(12345)
     data.train_mask, data.val_mask, data.test_mask = gen_masks(
@@ -83,8 +96,12 @@ def get_amazon(root: str, name: str) -> Tuple[Data, int, int]:
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_arxiv(root: str) -> Tuple[Data, int, int]:
-    dataset = PygNodePropPredDataset('ogbn-arxiv', f'{root}/OGB')
+def get_arxiv(root: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = PygNodePropPredDataset('ogbn-arxiv', f'{root}/OGB', transform=transform)
     data = dataset[0]
     data.edge_index = to_undirected(data.edge_index)
     data.node_year = None
@@ -96,8 +113,12 @@ def get_arxiv(root: str) -> Tuple[Data, int, int]:
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_products(root: str) -> Tuple[Data, int, int]:
-    dataset = PygNodePropPredDataset('ogbn-products', f'{root}/OGB')
+def get_products(root: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = PygNodePropPredDataset('ogbn-products', f'{root}/OGB', transform=transform)
     data = dataset[0]
     data.y = data.y.view(-1)
     split_idx = dataset.get_idx_split()
@@ -107,35 +128,39 @@ def get_products(root: str) -> Tuple[Data, int, int]:
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_yelp(root: str) -> Tuple[Data, int, int]:
-    dataset = Yelp(f'{root}/YELP')
+def get_yelp(root: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = Yelp(f'{root}/YELP', transform=transform)
     data = dataset[0]
     data.x = (data.x - data.x.mean(dim=0)) / data.x.std(dim=0)
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_flickr(root: str) -> Tuple[Data, int, int]:
-    dataset = Flickr(f'{root}/Flickr')
+def get_flickr(root: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = Flickr(f'{root}/Flickr', transform=transform)
     return dataset[0], dataset.num_features, dataset.num_classes
 
 
-def get_reddit(root: str) -> Tuple[Data, int, int]:
-    dataset = Reddit2(f'{root}/Reddit2')
+def get_reddit(root: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
+    if sign_transform:
+        transform = T.Compose([T.SIGN(sign_K)])
+    else:
+        transform = None
+    dataset = Reddit2(f'{root}/Reddit2', transform=transform)
     data = dataset[0]
     data.x = (data.x - data.x.mean(dim=0)) / data.x.std(dim=0)
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_ppi(root: str, split: str = 'train') -> Tuple[Data, int, int]:
-    dataset = PPI(f'{root}/PPI', split=split)
-    data = Batch.from_data_list(dataset)
-    data.batch = None
-    data.ptr = None
-    data[f'{split}_mask'] = torch.ones(data.num_nodes, dtype=torch.bool)
-    return data, dataset.num_features, dataset.num_classes
 
-
-def get_sbm(root: str, name: str) -> Tuple[Data, int, int]:
+def get_sbm(root: str, name: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
     dataset = GNNBenchmarkDataset(f'{root}/SBM', name, split='train')
     data = Batch.from_data_list(dataset)
     data.batch = None
@@ -143,29 +168,27 @@ def get_sbm(root: str, name: str) -> Tuple[Data, int, int]:
     return data, dataset.num_features, dataset.num_classes
 
 
-def get_data(root: str, name: str) -> Tuple[Data, int, int]:
+def get_data(root: str, name: str, sign_transform: bool, sign_k: int) -> Tuple[Data, int, int]:
     if name.lower() in ['cora', 'citeseer', 'pubmed']:
-        return get_planetoid(root, name)
+        return get_planetoid(root, name, sign_transform, sign_k)
     elif name.lower() in ['coauthorcs', 'coauthorphysics']:
-        return get_coauthor(root, name[8:])
+        return get_coauthor(root, name[8:], sign_transform, sign_k)
     elif name.lower() in ['amazoncomputers', 'amazonphoto']:
-        return get_amazon(root, name[6:])
+        return get_amazon(root, name[6:], sign_transform, sign_k)
     elif name.lower() == 'wikics':
-        return get_wikics(root)
+        return get_wikics(root, sign_transform, sign_k)
     elif name.lower() in ['cluster', 'pattern']:
-        return get_sbm(root, name)
+        return get_sbm(root, name, sign_transform, sign_k)
     elif name.lower() == 'reddit2':
-        return get_reddit(root)
-    elif name.lower() == 'ppi':
-        return get_ppi(root)
+        return get_reddit(root, sign_transform, sign_k)
     elif name.lower() == 'flickr':
-        return get_flickr(root)
+        return get_flickr(root, sign_transform, sign_k)
     elif name.lower() == 'yelp':
-        return get_yelp(root)
+        return get_yelp(root, sign_transform, sign_k)
     elif name.lower() in ['ogbn-arxiv', 'arxiv']:
-        return get_arxiv(root)
+        return get_arxiv(root, sign_transform, sign_k)
     elif name.lower() in ['ogbn-products', 'products']:
-        return get_products(root)
+        return get_products(root, sign_transform, sign_k)
     else:
         raise NotImplementedError
 
@@ -173,9 +196,13 @@ def get_data(root: str, name: str) -> Tuple[Data, int, int]:
 def to_inductive(data):
     data = data.clone()
     mask = data.train_mask
-    # print(f'mask={mask.shape}')
     data.x = data.x[mask]
     data.y = data.y[mask]
+    # for SIGN
+    i = 1
+    while hasattr(data, f'x{i}'):
+        data[f'x{i}'] = data[f'x{i}'][mask]
+        i += 1
     data.train_mask = data.train_mask[mask]
     data.test_mask = None
     data.edge_index, _ = subgraph(mask, data.edge_index, None,
@@ -222,8 +249,11 @@ def attack(train_data, data, attack_class, attack_ratio, save_dir, arch_name):
     return train_data
 
 
-def prepare_dataset(model_config, data, args, remove_edge_index=True):
-    train_data = to_inductive(data)
+def prepare_dataset(model_config, data, args, remove_edge_index=True, inductive=True):
+    if inductive:
+        train_data = to_inductive(data)
+    else:
+        train_data = copy.deepcopy(data)
     if hasattr(args, 'attack') and args.attack:
         train_data = attack(train_data, data, args.attack_class, args.attack_ratio, 
                             os.path.join(args.output_dir, args.dataset), model_config['arch_name'])
