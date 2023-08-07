@@ -61,7 +61,7 @@ class SAGE_MLP(BaseGNNModel):
             self.freeze_layer(self.MLP, freeze=False)
             self.mlp_freezed = False
 
-    def forward(self, x: Tensor, adj_t: SparseTensor, *args) -> Tensor:
+    def forward(self, x: Tensor, adj_t: SparseTensor, *args, **kwargs) -> Tensor:
         SAGE_out = self.SAGE(x, adj_t, *args)
         if self.mlp_freezed:
             x = SAGE_out
@@ -73,4 +73,4 @@ class SAGE_MLP(BaseGNNModel):
     def fast_forward(self, x: Tensor, idx) -> Tensor:
         assert self.gnn_output is not None
         assert not self.mlp_freezed
-        return self.gnn_output[idx].to(x.device) + self.MLP(x)
+        return self.gnn_output[idx.to(self.gnn_output.device)].to(x.device) + self.MLP(x)

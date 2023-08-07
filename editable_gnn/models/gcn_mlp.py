@@ -65,9 +65,9 @@ class GCN_MLP(BaseGNNModel):
     def fast_forward(self, x: Tensor, idx) -> Tensor:
         assert self.gnn_output is not None
         assert not self.mlp_freezed
-        return self.gnn_output[idx].to(x.device) + self.MLP(x)
+        return self.gnn_output[idx.to(self.gnn_output.device)].to(x.device) + self.MLP(x)
 
-    def forward(self, x: Tensor, adj_t: SparseTensor, *args) -> Tensor:
+    def forward(self, x: Tensor, adj_t: SparseTensor, *args, **kwargs) -> Tensor:
         GCN_out = self.GCN(x, adj_t, *args)
         if self.mlp_freezed:
             x = GCN_out
