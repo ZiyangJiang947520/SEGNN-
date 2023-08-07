@@ -2,11 +2,12 @@ from .gcn import GCN
 from .sage import SAGE
 from .gcn2 import GCN2
 from .mlp import MLP
-from.sgc import SGC
-from .sign import SIGN
+from.sgc import SGC, SGC_MLP
+from .sign import SIGN, SIGN_MLP
 
 from .gcn_mlp import GCN_MLP
 from .sage_mlp import SAGE_MLP
+
 
 __all__ = [
     'GCN',
@@ -16,5 +17,7 @@ __all__ = [
     'GCN_MLP',
     'SAGE_MLP',
     'SGC',
-    'SIGN'
+    'SIGN',
+    'SGC_MLP',
+    'SIGN_MLP'
 ]

@@ -47,7 +47,7 @@ if __name__ == '__main__':
         multi_label = False
     MODEL_FAMILY = getattr(models, model_config['arch_name'])
     # SIGN is special. It requries adding features before training the model.
-    if model_config['arch_name'] in ['SIGN']:
+    if model_config['arch_name'] in ['SIGN', 'SIGN_MLP']:
         sign_transform = True
         sign_k = model_config['architecture']['num_layers']
     else:
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     model = MODEL_FAMILY(in_channels=num_features, out_channels=num_classes, **model_config['architecture'])
     model.cuda()
     print(model)
-    if model_config['arch_name'] in ['SGC']:
+    if model_config['arch_name'] in ['SGC', 'SGC_MLP']:
         to_inductive = False
     else:
         to_inductive = True

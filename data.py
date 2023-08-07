@@ -51,8 +51,12 @@ def index2mask(idx: Tensor, size: int) -> Tensor:
 
 
 def get_planetoid(root: str, name: str, sign_transform: bool, sign_K: int) -> Tuple[Data, int, int]:
-    transform = T.Compose([T.NormalizeFeatures(), T.SIGN(sign_K), 
-                           T.RandomNodeSplit('train_rest', num_val=500, num_test=500)])
+    if sign_transform:
+        transform = T.Compose([T.NormalizeFeatures(), T.SIGN(sign_K), 
+                            T.RandomNodeSplit('train_rest', num_val=500, num_test=500)])
+    else:
+        transform = T.Compose([T.NormalizeFeatures(),
+                            T.RandomNodeSplit('train_rest', num_val=500, num_test=500)])
     dataset = Planetoid(f'{root}/Planetoid', name, transform=transform)
     return dataset[0], dataset.num_features, dataset.num_classes
 

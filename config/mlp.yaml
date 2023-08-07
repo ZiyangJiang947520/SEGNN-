@@ -1,6 +1,6 @@
-name: GCN
-norm: true
-loop: true
+name: MLP
+norm: false
+loop: false
 
 params:
 

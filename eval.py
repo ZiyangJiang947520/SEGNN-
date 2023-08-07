@@ -60,7 +60,13 @@ if __name__ == '__main__':
     else:
         multi_label = False
     MODEL_FAMILY = getattr(models, model_config['arch_name'])
-    data, num_features, num_classes = get_data(args.root, args.dataset)
+    if model_config['arch_name'] in ['SIGN', 'SIGN_MLP']:
+        sign_transform = True
+        sign_k = model_config['architecture']['num_layers']
+    else:
+        sign_transform = False
+        sign_k = None
+    data, num_features, num_classes = get_data(args.root, args.dataset, sign_transform=sign_transform, sign_k=sign_k)
     # print(f'data={data}')
     model = MODEL_FAMILY.from_pretrained(in_channels=num_features, 
                                 out_channels=num_classes, 
@@ -69,7 +75,7 @@ if __name__ == '__main__':
 
     print(model)
     model.cuda()
-    if model_config['arch_name'] in ['SGC']:
+    if model_config['arch_name'] in ['SGC', 'SGC_MLP']:
         to_inductive = False
     else:
         to_inductive = True

@@ -1,21 +1,21 @@
-name: SIGN
+name: SIGN_MLP
 norm: false
 loop: false
 
 params:
 
   arxiv:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
-      num_layers: 5
+      num_layers: 3
       hidden_channels: 128
       dropout: 0.5
     optim: adam
-    lr: 0.001
+    lr: 0.01
     epochs: 500
   
   reddit:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 256
@@ -26,7 +26,7 @@ params:
 
   
   flickr:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 256
@@ -36,7 +36,7 @@ params:
     epochs: 400
 
   yelp:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 3
       hidden_channels: 512
@@ -46,7 +46,7 @@ params:
     epochs: 500
 
   cora:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -56,7 +56,7 @@ params:
     epochs: 200
 
   citeseer:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -66,7 +66,7 @@ params:
     epochs: 200
 
   pubmed:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -76,7 +76,7 @@ params:
     epochs: 200
   
   amazoncomputers:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -86,7 +86,7 @@ params:
     epochs: 400
   
   amazonphoto:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -96,7 +96,7 @@ params:
     epochs: 400
   
   coauthorcs:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -106,7 +106,7 @@ params:
     epochs: 400
   
   coauthorphysics:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
@@ -116,7 +116,7 @@ params:
     epochs: 400
   
   wikics:
-    arch_name: SIGN
+    arch_name: SIGN_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32

@@ -1,126 +1,162 @@
-name: SIGN
-norm: false
-loop: false
+name: SGC_MLP
+norm: true
+loop: true
 
 params:
 
   arxiv:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
-      num_layers: 5
+      num_layers: 2
       hidden_channels: 128
       dropout: 0.5
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.001
+    lr: 0.01
     epochs: 500
   
-  reddit:
-    arch_name: SIGN
+  products:
+    arch_name: SGC
     architecture:
       num_layers: 2
       hidden_channels: 256
       dropout: 0.5
+      batch_norm: false
+      residual: false
+    optim: adam
+    lr: 0.002
+    epochs: 500
+  
+  reddit:
+    arch_name: SGC_MLP
+    architecture:
+      num_layers: 2
+      hidden_channels: 256
+      dropout: 0.5
+      batch_norm: false
+      residual: false
     optim: adam
     lr: 0.01
     epochs: 400
 
   
   flickr:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 256
       dropout: 0.3
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 400
 
   yelp:
-    arch_name: SIGN
+    arch_name: SGC
     architecture:
-      num_layers: 3
+      num_layers: 2
       hidden_channels: 512
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
     lr: 0.01
     epochs: 500
 
   cora:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 200
 
   citeseer:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 200
 
   pubmed:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 200
   
   amazoncomputers:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 400
   
   amazonphoto:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 400
   
   coauthorcs:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 400
   
   coauthorphysics:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 400
   
   wikics:
-    arch_name: SIGN
+    arch_name: SGC_MLP
     architecture:
       num_layers: 2
       hidden_channels: 32
       dropout: 0.1
+      batch_norm: false
+      residual: false
     optim: adam
-    lr: 0.01
+    lr: 0.1
     epochs: 400
