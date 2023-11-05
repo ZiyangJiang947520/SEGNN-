@@ -1,12 +1,12 @@
 save_dir_root=./rebuttal/ckpts
-output_dir=./rebuttal/finetune_new_std
+output_dir=./rebuttal/sgc_abl
 criterion=wrong2correct
 
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in cora flickr amazoncomputers amazonphoto coauthorcs; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for dataset in cora amazoncomputers amazonphoto coauthorcs; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
-for model in  sign_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
+for model in  sgc_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi

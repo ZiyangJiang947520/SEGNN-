@@ -102,6 +102,7 @@ class SGC_MLP(SGC):
         if self.mlp_freezed:
             x = GCN_out
         else:   
-            MLP_out = self.MLP(x, *args)
+            # MLP_out = self.MLP(x, *args)
+            MLP_out = self.MLP(self.conv._cached_x, *args)
             x = GCN_out + MLP_out
         return x

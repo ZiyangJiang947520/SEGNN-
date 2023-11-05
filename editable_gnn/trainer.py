@@ -649,7 +649,8 @@ class WholeGraphTrainer(BaseTrainer):
             opt.zero_grad()
             idx = np.random.choice(self.train_data.num_nodes, batch_size)
             idx = torch.from_numpy(idx).to(gnn_output.device)
-            MLP_output = self.model.MLP(self.train_data.x[idx])
+            # MLP_output = self.model.MLP(self.train_data.x[idx])
+            MLP_output = self.model.MLP(self.model.conv._cached_x[idx])
             cur_batch_gnn_output = gnn_output[idx]
             log_prob = F.log_softmax(MLP_output + cur_batch_gnn_output, dim=-1)
             main_loss = F.cross_entropy(MLP_output + gnn_output[idx], self.train_data.y[idx])
