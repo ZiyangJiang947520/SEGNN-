@@ -20,10 +20,10 @@ from editable_gnn.utils import set_seeds_all, kl_logit, ada_kl_logit
 from editable_gnn.edg import EDG, EDG_Plus
 
 class BaseTrainer(object):
-    def __init__(self, 
+    def __init__(self,
                  args,
-                 model: BaseModel, 
-                 train_data: Data, 
+                 model: BaseModel,
+                 train_data: Data,
                  whole_data: Data,
                  model_config: Dict,
                  output_dir: str,
@@ -37,18 +37,18 @@ class BaseTrainer(object):
         self.model_name = model_config['arch_name']
         if amp_mode is True:
             raise NotImplementedError
-        
+
         self.runs = args.runs
         self.logger = Logger(args.runs)
 
-        
+
         self.optimizer = None
         self.save_path = os.path.join(output_dir, dataset_name)
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
         self.loss_op = F.binary_cross_entropy_with_logits if is_multi_label_task else F.cross_entropy
 
-        
+
         self.seed = args.seed
 
         self.gamma = args.gamma if hasattr(args, 'gamma') else 1.0
@@ -57,9 +57,9 @@ class BaseTrainer(object):
 
 
     def train_loop(self,
-                   model: BaseModel, 
-                   optimizer: torch.optim.Optimizer, 
-                   train_data: Data, 
+                   model: BaseModel,
+                   optimizer: torch.optim.Optimizer,
+                   train_data: Data,
                    loss_op):
         model.train()
         optimizer.zero_grad()
@@ -120,7 +120,7 @@ class BaseTrainer(object):
                 return int(logits.argmax(dim=-1).eq(y).sum()) / y.size(0)
             except ZeroDivisionError:
                 return 0.
-            
+
         else:
             y_pred = logits > 0
             y_true = y > 0.5
@@ -209,10 +209,10 @@ class BaseTrainer(object):
         return optimizer
 
 
-    def select_node(self, whole_data: Data, 
-                    num_classes: int, 
-                    num_samples: int, 
-                    criterion: str, 
+    def select_node(self, whole_data: Data,
+                    num_classes: int,
+                    num_samples: int,
+                    criterion: str,
                     from_valid_set: bool = True):
         self.model.eval()
         bef_edit_logits = self.prediction(self.model, whole_data)
@@ -268,7 +268,7 @@ class BaseTrainer(object):
         print(f'edit time: {e - s}')
         return model, success, loss, step
 
-    def single_Diff_edit(self, model, idx, label, optimizer, max_num_step):       
+    def single_Diff_edit(self, model, idx, label, optimizer, max_num_step):
         input = self.grab_input(self.whole_data)
         with torch.no_grad():
             out_ori_val = model(**input)[self.whole_data.val_mask]
@@ -297,8 +297,8 @@ class BaseTrainer(object):
                 if success == 1.:
                     break
         return model, success, loss, step
-    
-    def single_Diff_Ada_edit(self, model, idx, label, optimizer, max_num_step):       
+
+    def single_Diff_Ada_edit(self, model, idx, label, optimizer, max_num_step):
         input = self.grab_input(self.whole_data)
         with torch.no_grad():
             out_ori_val = model(**input)[self.whole_data.val_mask]
@@ -324,19 +324,19 @@ class BaseTrainer(object):
                 if success == 1.:
                     break
         return model, success, loss, step
-    
+
     def EDG_edit(self, model, idx, label, optimizer, max_num_step):
         edg = EDG(self.model_config, self.loss_op, self.args)
         model, success, loss, step = edg.update_model(model, self.train_data, self.whole_data, idx, label, optimizer, max_num_step)
 
         return model, success, loss, step
-    
+
     def EDG_Plus_edit(self, model, idx, label, optimizer, max_num_step):
         edg_plus = EDG_Plus(self.model_config, self.loss_op, self.args)
         model, success, loss, step = edg_plus.update_model(model, self.train_data, self.whole_data, idx, label, optimizer, max_num_step)
 
         return model, success, loss, step
-    
+
     def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD'):
         assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus']
         if manner == 'GD':
@@ -363,9 +363,9 @@ class BaseTrainer(object):
             if specific_class is None:
                 res = [*self.test(edited_model, whole_data), success, steps]
             else:
-                res = [*self.test(edited_model, whole_data), 
-                       *self.test(edited_model, whole_data, specific_class=specific_class), 
-                       success, 
+                res = [*self.test(edited_model, whole_data),
+                       *self.test(edited_model, whole_data, specific_class=specific_class),
+                       success,
                        steps]
             # for n_hop in [1, 2]:
             #     res.append(self.get_khop_neighbors_acc(model, n_hop, idx))
@@ -384,9 +384,9 @@ class BaseTrainer(object):
             if specific_class is None:
                 res = [*self.test(edited_model, whole_data), success, steps]
             else:
-                res = [*self.test(edited_model, whole_data), 
-                       *self.test(edited_model, whole_data, specific_class=specific_class), 
-                       success, 
+                res = [*self.test(edited_model, whole_data),
+                       *self.test(edited_model, whole_data, specific_class=specific_class),
+                       success,
                        steps]
             # import ipdb; ipdb.set_trace()
             # torch.save(edited_model.state_dict(), 'cora_gcn_mlp.pt')
@@ -402,9 +402,9 @@ class BaseTrainer(object):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
-        # edited_model, success, loss, steps = self.single_edit(model, node_idx_2flip.squeeze(), 
+        # edited_model, success, loss, steps = self.single_edit(model, node_idx_2flip.squeeze(),
         #                                                       flipped_label.squeeze(), optimizer, max_num_step)
-        edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip.squeeze(), 
+        edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip.squeeze(),
                                                               flipped_label.squeeze(), optimizer, max_num_step, manner)
         return *self.test(edited_model, whole_data), success, steps
 
@@ -419,7 +419,7 @@ class BaseTrainer(object):
         return acc
 
 
-    def eval_edit_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, eval_setting, manner='GD'): 
+    def eval_edit_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, eval_setting, manner='GD'):
         bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
         bef_edit_hop_acc = {}
         N_HOP = 3
@@ -469,12 +469,12 @@ class BaseTrainer(object):
             hop_drawdown = {}
         else:
             raise NotImplementedError
-        return dict(bef_edit_tra_acc=bef_edit_tra_acc, 
-                    bef_edit_val_acc=bef_edit_val_acc, 
-                    bef_edit_tst_acc=bef_edit_tst_acc, 
-                    tra_drawdown=tra_drawdown * 100, 
-                    val_drawdown=val_drawdown * 100, 
-                    test_drawdown=test_drawdown * 100, 
+        return dict(bef_edit_tra_acc=bef_edit_tra_acc,
+                    bef_edit_val_acc=bef_edit_val_acc,
+                    bef_edit_tst_acc=bef_edit_tst_acc,
+                    tra_drawdown=tra_drawdown * 100,
+                    val_drawdown=val_drawdown * 100,
+                    test_drawdown=test_drawdown * 100,
                     tra_std=tra_std,
                     val_std=val_std,
                     test_std=test_std,
@@ -483,8 +483,8 @@ class BaseTrainer(object):
                     hop_drawdown=hop_drawdown,
                     )
 
-    def eval_edit_generalization_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, 
-                                         bef_edit_cs_results, specific_class, eval_setting, manner='GD'): 
+    def eval_edit_generalization_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results,
+                                         bef_edit_cs_results, specific_class, eval_setting, manner='GD'):
         bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
         bef_edit_cs_tra_acc, bef_edit_cs_val_acc, bef_edit_cs_tst_acc = bef_edit_cs_results
         bef_edit_hop_acc = {}
@@ -495,7 +495,7 @@ class BaseTrainer(object):
                 bef_edit_hop_acc[n_hop].append(self.get_khop_neighbors_acc(self.model, 1, idx))
         assert eval_setting in ['sequential', 'independent', 'batch']
         if eval_setting == 'sequential':
-            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner, 
+            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner,
                                                      specific_class=specific_class)
             train_acc, val_acc, test_acc, cs_train_acc, cs_val_acc, cs_test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
@@ -507,7 +507,7 @@ class BaseTrainer(object):
             success_rate = succeses[-1]
             hop_drawdown = {}
         elif eval_setting == 'independent' :
-            results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, 
+            results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step,
                                                       num_htop=N_HOP, manner=manner, specific_class=specific_class)
             train_acc, val_acc, test_acc, cs_train_acc, cs_val_acc, cs_test_acc, succeses, steps, hop_acc = zip(*results_temporary)
             hop_acc = np.vstack(hop_acc)
@@ -532,8 +532,8 @@ class BaseTrainer(object):
             hop_drawdown = {}
         else:
             raise NotImplementedError
-        return dict(bef_edit_tra_acc=bef_edit_tra_acc, 
-                    bef_edit_val_acc=bef_edit_val_acc, 
+        return dict(bef_edit_tra_acc=bef_edit_tra_acc,
+                    bef_edit_val_acc=bef_edit_val_acc,
                     bef_edit_tst_acc=bef_edit_tst_acc,
                     bef_edit_cs_tra_acc=bef_edit_cs_tra_acc,
                     bef_edit_cs_val_acc=bef_edit_cs_val_acc,
@@ -541,24 +541,24 @@ class BaseTrainer(object):
                     cs_train_drawdown=cs_tra_drawdown * 100,
                     cs_val_drawdown=cs_val_drawdown * 100,
                     cs_test_drawdown=cs_test_drawdown * 100,
-                    tra_drawdown=tra_drawdown * 100, 
-                    val_drawdown=val_drawdown * 100, 
-                    test_drawdown=test_drawdown * 100, 
+                    tra_drawdown=tra_drawdown * 100,
+                    val_drawdown=val_drawdown * 100,
+                    test_drawdown=test_drawdown * 100,
                     success_rate=success_rate,
                     mean_complexity=np.mean(steps),
                     hop_drawdown=hop_drawdown,
                     )
-    
+
 
     def grab_input(self, data: Data, indices=None):
         return {"x": data.x}
 
 
 class WholeGraphTrainer(BaseTrainer):
-    def __init__(self, 
+    def __init__(self,
                  args,
-                 model: BaseModel, 
-                 train_data: Data, 
+                 model: BaseModel,
+                 train_data: Data,
                  whole_data: Data,
                  model_config: Dict,
                  output_dir: str,
@@ -566,8 +566,8 @@ class WholeGraphTrainer(BaseTrainer):
                  is_multi_label_task: bool,
                  amp_mode: bool = False) -> None:
         super(WholeGraphTrainer, self).__init__(
-            model=model, 
-            train_data=train_data, 
+            model=model,
+            train_data=train_data,
             whole_data=whole_data,
             model_config=model_config,
             output_dir=output_dir,
@@ -575,7 +575,7 @@ class WholeGraphTrainer(BaseTrainer):
             is_multi_label_task=is_multi_label_task,
             amp_mode=amp_mode,
             args=args)
-            
+
 
     def grab_input(self, data: Data):
         x = data.x
@@ -623,7 +623,7 @@ class WholeGraphTrainer(BaseTrainer):
         print(f'max allocated mem: {torch.cuda.max_memory_allocated() / (1024**2)} MB')
         print(f'edit time: {e - s}')
         return model, success, loss, step
-    
+
 
     def reset_mlp(self):
         for lin in self.model.MLP.lins:
@@ -649,8 +649,8 @@ class WholeGraphTrainer(BaseTrainer):
             opt.zero_grad()
             idx = np.random.choice(self.train_data.num_nodes, batch_size)
             idx = torch.from_numpy(idx).to(gnn_output.device)
-            # MLP_output = self.model.MLP(self.train_data.x[idx])
-            MLP_output = self.model.MLP(self.model.conv._cached_x[idx])
+            MLP_output = self.model.MLP(self.train_data.x[idx])
+            # MLP_output = self.model.MLP(self.model.convs._cached_x[idx])
             cur_batch_gnn_output = gnn_output[idx]
             log_prob = F.log_softmax(MLP_output + cur_batch_gnn_output, dim=-1)
             main_loss = F.cross_entropy(MLP_output + gnn_output[idx], self.train_data.y[idx])

@@ -22,7 +22,7 @@ criterion=wrong2correct
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
 for dataset in amazoncomputers amazonphoto coauthorcs coauthorphysics; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
-for model in  gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
+for model in  sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi

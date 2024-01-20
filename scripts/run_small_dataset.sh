@@ -1,10 +1,10 @@
 
-# output_dir=./ckpts
-output_dir=./rebuttal/ckpts
+output_dir=./ckpts
+# output_dir=./rebuttal/ckpts
 
 # flickr amazoncomputers amazonphoto coauthorcs
 for dataset in flickr amazoncomputers amazonphoto coauthorcs; do  ##cora flickr reddit2 amazoncomputers amazonphoto coauthorcs coauthorphysics yelp arxiv products
-for model in sign_mlp; do  ## gcn sage mlp gcn_mlp sage_mlp
+    for model in sage_mlp; do  ## gcn sage mlp gcn_mlp sage_mlp sign_mlp
     if ! [ -d "./${output_dir}/${dataset}" ]; then
         mkdir -p "./${output_dir}/${dataset}"
     fi
