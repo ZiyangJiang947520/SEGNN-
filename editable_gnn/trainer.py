@@ -433,7 +433,7 @@ class BaseTrainer(object):
             train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
-            test_drawdown = bef_edit_tst_acc - test_acc[-1]
+            test_drawdown = test_drawdown = np.array([bef_edit_tst_acc] * len(test_acc)) - test_acc
             tra_std = None
             val_std = None
             test_std = None
@@ -500,7 +500,7 @@ class BaseTrainer(object):
             train_acc, val_acc, test_acc, cs_train_acc, cs_val_acc, cs_test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
-            test_drawdown = bef_edit_tst_acc - test_acc[-1]
+            test_drawdown = np.array([bef_edit_tst_acc] * len(test_acc)) - test_acc[-1]
             cs_tra_drawdown = bef_edit_cs_tra_acc - cs_train_acc[-1]
             cs_val_drawdown = bef_edit_cs_val_acc - cs_val_acc[-1]
             cs_test_drawdown = bef_edit_cs_tst_acc - cs_test_acc[-1]
