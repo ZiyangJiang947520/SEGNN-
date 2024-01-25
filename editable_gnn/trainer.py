@@ -433,10 +433,11 @@ class BaseTrainer(object):
             train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
-            test_drawdown = test_drawdown = np.array([bef_edit_tst_acc] * len(test_acc)) - test_acc
+            test_drawdown = test_drawdown = np.round((np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals = 3).tolist()
             tra_std = None
             val_std = None
             test_std = None
+            #ipdb.set_trace()
 
             success_rate = succeses[-1]
             hop_drawdown = {}
@@ -474,7 +475,7 @@ class BaseTrainer(object):
                     bef_edit_tst_acc=bef_edit_tst_acc,
                     tra_drawdown=tra_drawdown * 100,
                     val_drawdown=val_drawdown * 100,
-                    test_drawdown=test_drawdown * 100,
+                    test_drawdown=[test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown],
                     tra_std=tra_std,
                     val_std=val_std,
                     test_std=test_std,
@@ -585,7 +586,7 @@ class WholeGraphTrainer(BaseTrainer):
         while hasattr(data, f'x{i}'):
             xs.append(getattr(data, f'x{i}'))
             i += 1
-        return {"x": data.x, 'adj_t': data.adj_t, 'xs': xs}
+        return {"x": data.x, 'adj_t': data.adj_t}
 
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):
