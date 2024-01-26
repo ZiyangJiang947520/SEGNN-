@@ -42,7 +42,7 @@ class GCN_MLP(BaseGNNModel):
         
         self.mlp_freezed = True
         if load_pretrained_backbone:
-            self.freeze_layer(self.SAGE, freeze=True)
+            self.freeze_layer(self.GCN, freeze=True)
             self.freeze_layer(self.MLP, freeze=True)
             self.mlp_freezed = True
         else:

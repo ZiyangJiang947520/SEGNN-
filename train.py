@@ -72,6 +72,6 @@ if __name__ == '__main__':
     TRAINER_CLS = BaseTrainer if  model_config['arch_name'] == 'MLP' else WholeGraphTrainer
     trainer = TRAINER_CLS(args, model, train_data, whole_data, model_config,
                           args.output_dir, args.dataset, multi_label,
-                          False)
+                          False,  load_pretrained_backbone=load_pretrained_backbone)
 
     trainer.train()

@@ -29,7 +29,8 @@ class BaseTrainer(object):
                  output_dir: str,
                  dataset_name: str,
                  is_multi_label_task: bool,
-                 amp_mode: bool = False) -> None:
+                 amp_mode: bool = False,
+                 load_pretrained_backbone: bool = False) -> None:
         self.model = model
         self.train_data = train_data
         self.whole_data = whole_data
@@ -54,6 +55,7 @@ class BaseTrainer(object):
         self.gamma = args.gamma if hasattr(args, 'gamma') else 1.0
         self.args = args
         self.hyper_Diff = args.hyper_Diff if hasattr(args, 'hyper_Diff') else 0.0
+        self.load_pretrained_backbone = load_pretrained_backbone
 
 
     def train_loop(self,
@@ -94,7 +96,8 @@ class BaseTrainer(object):
         best_val = -1.
         checkpoint_prefix = f'{self.model_name}_run{run}'
         for epoch in range(1, self.model_config['epochs'] + 1):
-            train_loss = self.train_loop(self.model, optimizer, self.train_data, self.loss_op)
+            if not self.load_pretrained_backbone:
+                train_loss = self.train_loop(self.model, optimizer, self.train_data, self.loss_op)
             result = self.test(self.model, self.whole_data)
             self.logger.add_result(run, result)
             train_acc, valid_acc, test_acc = result
@@ -565,7 +568,8 @@ class WholeGraphTrainer(BaseTrainer):
                  output_dir: str,
                  dataset_name: str,
                  is_multi_label_task: bool,
-                 amp_mode: bool = False) -> None:
+                 amp_mode: bool = False,
+                 load_pretrained_backbone: bool = False) -> None:
         super(WholeGraphTrainer, self).__init__(
             model=model,
             train_data=train_data,
@@ -575,6 +579,7 @@ class WholeGraphTrainer(BaseTrainer):
             dataset_name=dataset_name,
             is_multi_label_task=is_multi_label_task,
             amp_mode=amp_mode,
+            load_pretrained_backbone=load_pretrained_backbone,
             args=args)
 
 
