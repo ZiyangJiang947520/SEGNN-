@@ -20,7 +20,7 @@ parser.add_argument('--root', type=str, default='../data')
 parser.add_argument('--seed', default=42, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--saved_model_path', type=str, required=True,
-                    help='the path to the traiend model')
+                    help='the path to the trained model')
 parser.add_argument('--output_dir', default='./finetune', type=str)
 parser.add_argument('--num_samples', default=50, type=int)
 parser.add_argument('--runs', default=1, type=int,

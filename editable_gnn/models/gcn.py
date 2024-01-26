@@ -10,7 +10,9 @@ from .base import BaseGNNModel
 class GCN(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
                  out_channels: int, num_layers: int, dropout: float = 0.0,
-                 batch_norm: bool = False, residual: bool = False):
+                 batch_norm: bool = False, residual: bool = False,
+                 load_pretrained_backbone: bool = False,
+                 saved_ckpt_path: str = ''):
         super(GCN, self).__init__(in_channels, hidden_channels, out_channels, 
                                   num_layers, dropout, batch_norm, residual)
         for i in range(num_layers):

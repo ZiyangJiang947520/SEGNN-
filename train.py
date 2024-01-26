@@ -1,4 +1,5 @@
 import argparse
+import os
 import ipdb
 import yaml
 import editable_gnn.models as models
@@ -32,6 +33,7 @@ if __name__ == '__main__':
         name = model_config['name']
         loop = model_config.get('loop', False)
         normalize = model_config.get('norm', False)
+        load_pretrained_backbone = model_config.get('load_pretrained_backbone', False)
         if args.dataset == 'reddit2':
             model_config = model_config['params']['reddit']
         else:
@@ -54,7 +56,8 @@ if __name__ == '__main__':
         sign_transform = False
         sign_k = None
     data, num_features, num_classes = get_data(args.root, args.dataset, sign_transform=sign_transform, sign_k=sign_k)
-    model = MODEL_FAMILY(in_channels=num_features, out_channels=num_classes, **model_config['architecture'])
+    save_path = os.path.join(args.output_dir, args.dataset)
+    model = MODEL_FAMILY(in_channels=num_features, out_channels=num_classes, load_pretrained_backbone = load_pretrained_backbone, saved_ckpt_path = save_path, **model_config['architecture'])
     model.cuda()
     print(model)
     if model_config['arch_name'] in ['SGC', 'SGC_MLP']:

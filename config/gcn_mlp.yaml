@@ -1,6 +1,7 @@
 name: GCN_MLP
 norm: true
 loop: true
+load_pretrained_backbone: true
 
 params:
 

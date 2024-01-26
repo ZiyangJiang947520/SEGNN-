@@ -16,19 +16,32 @@ class GCN_MLP(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
                  out_channels: int, num_layers: int,
                  dropout: float = 0.0,
-                 batch_norm: bool = False, residual: bool = False):
+                 batch_norm: bool = False, residual: bool = False,
+                 load_pretrained_backbone: bool = False,
+                 saved_ckpt_path: str = ''):
         super(GCN_MLP, self).__init__(in_channels, hidden_channels, out_channels, \
                                   num_layers, dropout, batch_norm, residual)
         # self.alpha, self.theta = alpha, theta
 
-        self.GCN = GCN(in_channels=in_channels, hidden_channels=hidden_channels, out_channels=out_channels,\
-                        num_layers=num_layers, dropout=dropout, batch_norm=batch_norm, residual=residual)
+        if load_pretrained_backbone:
+            self.SAGE = SAGE.from_pretrained(
+                in_channels=in_channels, 
+                out_channels=out_channels,
+                saved_ckpt_path=saved_ckpt_path)
+        else:
+            self.GCN = GCN(in_channels=in_channels, hidden_channels=hidden_channels, out_channels=out_channels,\
+                            num_layers=num_layers, dropout=dropout, batch_norm=batch_norm, residual=residual)
         self.MLP = MLP(in_channels=in_channels, hidden_channels=hidden_channels,
                         out_channels=out_channels, num_layers=num_layers, dropout=dropout,
                         batch_norm=batch_norm, residual=residual)
         
         self.mlp_freezed = True
-        self.freeze_module(train=True)
+        if load_pretrained_backbone:
+            self.freeze_layer(self.SAGE, freeze=True)
+            self.freeze_layer(self.MLP, freeze=True)
+            self.mlp_freezed = True
+        else:
+            self.freeze_module(train=True)
         self.gnn_output = None
 
     def reset_parameters(self):

@@ -1,6 +1,7 @@
 name: SAGE_MLP
 norm: false
 loop: false
+load_pretrained_backbone: true
 
 params:
   arxiv:
