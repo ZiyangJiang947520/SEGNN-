@@ -406,11 +406,12 @@ class BaseTrainer(object):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
-        # edited_model, success, loss, steps = self.single_edit(model, node_idx_2flip.squeeze(),
-        #                                                       flipped_label.squeeze(), optimizer, max_num_step)
-        edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip.squeeze(),
-                                                              flipped_label.squeeze(), optimizer, max_num_step, manner)
-        return *self.test(edited_model, whole_data), success, steps
+        results_temporary = []
+        for idx in tqdm(range(len(node_idx_2flip))):
+            edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(), flipped_label[:idx + 1].squeeze(), optimizer, max_num_step, manner)
+            res = [*self.test(edited_model, whole_data), success, steps]
+            results_temporary.append(res)
+        return results_temporary
 
 
     def get_khop_neighbors_acc(self, model, num_hop, node_idx):
@@ -461,16 +462,17 @@ class BaseTrainer(object):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
             # pdb.set_trace()
         elif eval_setting == 'batch':
-            train_acc, val_acc, test_acc, succeses, steps = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
-            tra_drawdown = bef_edit_tra_acc - train_acc
-            val_drawdown = bef_edit_val_acc - val_acc
-            test_drawdown = bef_edit_tst_acc - test_acc
+            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
+            train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
+            tra_drawdown = bef_edit_tra_acc - train_acc[-1]
+            val_drawdown = bef_edit_val_acc - val_acc[-1]
+            test_drawdown = test_drawdown = np.round((np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals = 3).tolist()
             tra_std = None
             val_std = None
             test_std = None
-            success_rate=succeses,
-            if isinstance(steps, int):
-                steps = [steps]
+            #ipdb.set_trace()
+
+            success_rate = succeses[-1]
             hop_drawdown = {}
         else:
             raise NotImplementedError
