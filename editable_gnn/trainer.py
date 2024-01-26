@@ -91,7 +91,8 @@ class BaseTrainer(object):
 
 
     def single_run(self, run: int):
-        self.model.reset_parameters()
+        if not self.load_pretrained_backbone:
+            self.model.reset_parameters()
         optimizer = self.get_optimizer(self.model_config, self.model)
         best_val = -1.
         checkpoint_prefix = f'{self.model_name}_run{run}'
