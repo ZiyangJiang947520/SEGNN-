@@ -24,10 +24,15 @@ class GCN_MLP(BaseGNNModel):
         # self.alpha, self.theta = alpha, theta
 
         if load_pretrained_backbone:
-            self.SAGE = SAGE.from_pretrained(
+            self.GCN = GCN.from_pretrained(
                 in_channels=in_channels, 
+                hidden_channels=hidden_channels,
                 out_channels=out_channels,
-                saved_ckpt_path=saved_ckpt_path)
+                saved_ckpt_path=saved_ckpt_path,
+                num_layers=num_layers, 
+                dropout=dropout, 
+                batch_norm=batch_norm, 
+                residual=residual)
         else:
             self.GCN = GCN(in_channels=in_channels, hidden_channels=hidden_channels, out_channels=out_channels,\
                             num_layers=num_layers, dropout=dropout, batch_norm=batch_norm, residual=residual)
