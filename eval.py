@@ -124,10 +124,8 @@ if __name__ == '__main__':
                                                         from_valid_set=True)
 
     mixup_training_samples_idx, mixup_label = trainer.select_mixup_training_nodes(whole_data=whole_data,
-                                                                                num_classes=num_classes,
-                                                                                num_samples=args.num_samples,
-                                                                                criterion=args.criterion,
-                                                                                from_valid_set=True)
+                                                                                  criterion=args.criterion,
+                                                                                  num_samples=args.num_mixup_training_samples)
     #pdb.set_trace()
     node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
     mixup_training_samples_idx, mixup_label =  mixup_training_samples_idx.cuda(), mixup_label.cuda()
@@ -140,9 +138,7 @@ if __name__ == '__main__':
                                         max_num_step=MAX_NUM_EDIT_STEPS,
                                         bef_edit_results=bef_edit_results,
                                         eval_setting='sequential',
-                                        manner=args.manner,
-                                        mixup_training_samples_idx=mixup_training_samples_idx,
-                                        mixup_label=mixup_label)
+                                        manner=args.manner)
     print(seq_results)
 
     print(f'the calculated stats after {args.num_samples} independent edit '
@@ -164,14 +160,16 @@ if __name__ == '__main__':
                                         max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH,
                                         bef_edit_results=bef_edit_results,
                                         eval_setting='batch',
-                                        manner=args.manner)
+                                        manner=args.manner,
+                                        mixup_training_samples_idx=mixup_training_samples_idx,
+                                        mixup_label=mixup_label)
     print(batch_results)
     summary = {'seq_edit': seq_results,
                'ind_edit': ind_results,
                'batch_edit': batch_results,
                'model_config': model_config,
                'bef_edit_ft_results': bef_edit_ft_results}
-    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'  
+    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'
     if not os.path.exists(root_json):
         os.makedirs(root_json)
     if args.manner == 'GD':

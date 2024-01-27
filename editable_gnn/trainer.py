@@ -1,6 +1,6 @@
 import os
 import time
-import ipdb
+import pdb
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 from copy import deepcopy
@@ -244,7 +244,8 @@ class BaseTrainer(object):
 
     def select_mixup_training_nodes(self,
                                     whole_data: Data,
-                                    criterion: str):
+                                    criterion: str,
+                                    num_samples:int = 0):
         self.model.eval()
         bef_edit_logits = self.prediction(self.model, whole_data)
         bef_edit_pred = bef_edit_logits.argmax(dim=-1)
@@ -427,7 +428,7 @@ class BaseTrainer(object):
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
         results_temporary = []
-        #ipdb.set_trace()
+        #pdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
             if mixup_training_samples_idx is not None:
                 edited_model, success, loss, steps = self.edit_select(model,
@@ -457,6 +458,7 @@ class BaseTrainer(object):
         bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
         bef_edit_hop_acc = {}
         N_HOP = 3
+        #pdb.set_trace()
         for n_hop in range(1, N_HOP + 1):
             bef_edit_hop_acc[n_hop] = []
             for idx in node_idx_2flip:
