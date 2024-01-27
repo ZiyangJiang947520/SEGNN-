@@ -362,7 +362,29 @@ class BaseTrainer(object):
 
         return model, success, loss, step
 
+    def bef_edit_check(self,  model, idx, label):
+        model.eval()
+        torch.cuda.synchronize()
+        input = self.grab_input(self.whole_data)
+        input['x'] = input['x'][idx]
+        out = model(**input)
+        y_pred = out.argmax(dim=-1)
+        # sequential or independent setting
+        if label.shape[0] == 1:
+            if y_pred == label:
+                success = True
+            else:
+                success = False
+        # batch setting
+        else:
+            success = int(y_pred.eq(label).sum()) / label.size(0)
+        torch.cuda.synchronize()
+        return success
+
     def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD'):
+        bef_edit_success = self.bef_edit_check(model, idx, f_label)
+        if bef_edit_success == 1.:
+            return model, bef_edit_success, 0, 0
         assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus']
         if manner == 'GD':
             return self.single_edit(model, idx, f_label, optimizer, max_num_step)
