@@ -407,8 +407,9 @@ class BaseTrainer(object):
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
         results_temporary = []
+        #ipdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
-            edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(), flipped_label[:idx + 1].squeeze(), optimizer, max_num_step, manner)
+            edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
             results_temporary.append(res)
         return results_temporary
@@ -462,7 +463,7 @@ class BaseTrainer(object):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
             # pdb.set_trace()
         elif eval_setting == 'batch':
-            results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
+            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
             train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
