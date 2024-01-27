@@ -244,10 +244,7 @@ class BaseTrainer(object):
 
     def select_mixup_training_nodes(self,
                                     whole_data: Data,
-                                    num_classes: int,
-                                    num_samples: int,
-                                    criterion: str,
-                                    from_valid_set: bool = True):
+                                    criterion: str):
         self.model.eval()
         bef_edit_logits = self.prediction(self.model, whole_data)
         bef_edit_pred = bef_edit_logits.argmax(dim=-1)
@@ -494,7 +491,7 @@ class BaseTrainer(object):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
             # pdb.set_trace()
         elif eval_setting == 'batch':
-            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner, mixup_training_samples_idx, mixup_label)
+            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner, mixup_training_samples_idx = mixup_training_samples_idx, mixup_label = mixup_label)
             train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]

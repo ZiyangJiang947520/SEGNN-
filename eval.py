@@ -100,6 +100,7 @@ if __name__ == '__main__':
     train_acc, valid_acc, test_acc = bef_edit_results
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
 
+    bef_edit_ft_results = {}
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
         MAX_NUM_EDIT_STEPS = 500
@@ -168,8 +169,9 @@ if __name__ == '__main__':
     summary = {'seq_edit': seq_results,
                'ind_edit': ind_results,
                'batch_edit': batch_results,
-               'model_config': model_config}
-    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'
+               'model_config': model_config,
+               'bef_edit_ft_results': bef_edit_ft_results}
+    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'  
     if not os.path.exists(root_json):
         os.makedirs(root_json)
     if args.manner == 'GD':
