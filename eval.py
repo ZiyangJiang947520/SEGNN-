@@ -23,6 +23,7 @@ parser.add_argument('--saved_model_path', type=str, required=True,
                     help='the path to the trained model')
 parser.add_argument('--output_dir', default='./finetune', type=str)
 parser.add_argument('--num_samples', default=50, type=int)
+parser.add_argument('--num_mixup_training_samples', default=0, type=int)
 parser.add_argument('--runs', default=1, type=int,
                     help='number of runs')
 parser.add_argument('--criterion', type=str, required=True, help='the criterion of how to select the node need to be patched.' \
@@ -120,8 +121,15 @@ if __name__ == '__main__':
                                                         num_samples=args.num_samples, 
                                                         criterion=args.criterion, 
                                                         from_valid_set=True)
+    
+    mixup_training_samples_idx, mixup_label = trainer.select_mixup_training_nodes(whole_data=whole_data, 
+                                                                                num_classes=num_classes, 
+                                                                                num_samples=args.num_samples, 
+                                                                                criterion=args.criterion, 
+                                                                                from_valid_set=True)
                                                         
     node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
+    mixup_training_samples_idx, mixup_label =  mixup_training_samples_idx.cuda(), mixup_label.cuda()
 
     print(f'the calculated stats averaged over {args.num_samples} sequential edit '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
@@ -131,7 +139,9 @@ if __name__ == '__main__':
                                         max_num_step=MAX_NUM_EDIT_STEPS, 
                                         bef_edit_results=bef_edit_results, 
                                         eval_setting='sequential',
-                                        manner=args.manner)
+                                        manner=args.manner,
+                                        mixup_training_samples_idx=mixup_training_samples_idx, 
+                                        mixup_label=mixup_label)
     print(seq_results)
 
     print(f'the calculated stats after {args.num_samples} independent edit '

@@ -56,6 +56,7 @@ class BaseTrainer(object):
         self.args = args
         self.hyper_Diff = args.hyper_Diff if hasattr(args, 'hyper_Diff') else 0.0
         self.load_pretrained_backbone = load_pretrained_backbone
+        self.num_mixup_training_samples = args.num_mixup_training_samples
 
 
     def train_loop(self,
@@ -241,6 +242,28 @@ class BaseTrainer(object):
             raise NotImplementedError
         return node_idx_2flip, flipped_label
 
+    def select_mixup_training_nodes(self,
+                                    whole_data: Data,
+                                    num_classes: int,
+                                    num_samples: int,
+                                    criterion: str,
+                                    from_valid_set: bool = True):
+        self.model.eval()
+        bef_edit_logits = self.prediction(self.model, whole_data)
+        bef_edit_pred = bef_edit_logits.argmax(dim=-1)
+        train_y_true = whole_data.y[whole_data.train_mask]
+        train_y_pred = bef_edit_pred[whole_data.train_mask]
+        nodes_set = whole_data.train_mask.nonzero().squeeze()
+        right_pred_set = mixup_training_samples_idx = None
+
+        assert criterion in ['wrong2correct', 'random']
+        if criterion == 'wrong2correct':
+            right_pred_set = train_y_pred.eq(train_y_true).nonzero()
+            train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:self.num_mixup_training_samples]]
+            mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
+            mixup_label = whole_data.y[mixup_training_samples_idx]
+        
+        return mixup_training_samples_idx, mixup_label
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):
         model.train()
@@ -402,14 +425,22 @@ class BaseTrainer(object):
         return results_temporary
 
 
-    def batch_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD'):
+    def batch_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD', mixup_training_samples_idx = None, mixup_label = None):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
         results_temporary = []
         #ipdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
-            edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
+            if mixup_training_samples_idx is not None:
+                edited_model, success, loss, steps = self.edit_select(model, 
+                                                                    torch.cat((node_idx_2flip[:idx + 1].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0), 
+                                                                    torch.cat((flipped_label[:idx + 1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0), 
+                                                                    optimizer, 
+                                                                    max_num_step, 
+                                                                    manner)
+            else:
+                edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
             results_temporary.append(res)
         return results_temporary
@@ -425,7 +456,7 @@ class BaseTrainer(object):
         return acc
 
 
-    def eval_edit_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, eval_setting, manner='GD'):
+    def eval_edit_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results, eval_setting, manner='GD',  mixup_training_samples_idx = None, mixup_label = None):
         bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
         bef_edit_hop_acc = {}
         N_HOP = 3
@@ -463,7 +494,7 @@ class BaseTrainer(object):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
             # pdb.set_trace()
         elif eval_setting == 'batch':
-            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
+            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner, mixup_training_samples_idx, mixup_label)
             train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
