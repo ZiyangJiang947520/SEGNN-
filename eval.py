@@ -12,9 +12,9 @@ from editable_gnn import WholeGraphTrainer, BaseTrainer, set_seeds_all
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--config', type=str, required=True, 
+parser.add_argument('--config', type=str, required=True,
                     help='the path to the configuration file')
-parser.add_argument('--dataset', type=str, required=True, 
+parser.add_argument('--dataset', type=str, required=True,
                     help='the name of the applied dataset')
 parser.add_argument('--root', type=str, default='../data')
 parser.add_argument('--seed', default=42, type=int,
@@ -69,8 +69,8 @@ if __name__ == '__main__':
         sign_k = None
     data, num_features, num_classes = get_data(args.root, args.dataset, sign_transform=sign_transform, sign_k=sign_k)
     # print(f'data={data}')
-    model = MODEL_FAMILY.from_pretrained(in_channels=num_features, 
-                                out_channels=num_classes, 
+    model = MODEL_FAMILY.from_pretrained(in_channels=num_features,
+                                out_channels=num_classes,
                                 saved_ckpt_path=args.saved_model_path,
                                 **model_config['architecture'])
 
@@ -85,21 +85,21 @@ if __name__ == '__main__':
     print(f'whole data: {whole_data}')
     TRAINER_CLS = BaseTrainer if model_config['arch_name'] == 'MLP' else WholeGraphTrainer
     trainer = TRAINER_CLS(args=args,
-                          model=model, 
-                          train_data=train_data, 
-                          whole_data=whole_data, 
-                          model_config=model_config, 
-                          output_dir=args.output_dir, 
-                          dataset_name=args.dataset, 
-                          is_multi_label_task=multi_label, 
+                          model=model,
+                          train_data=train_data,
+                          whole_data=whole_data,
+                          model_config=model_config,
+                          output_dir=args.output_dir,
+                          dataset_name=args.dataset,
+                          is_multi_label_task=multi_label,
                           amp_mode=False)
-    
+
 
 
     bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
-    
+
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
         MAX_NUM_EDIT_STEPS = 500
@@ -116,60 +116,60 @@ if __name__ == '__main__':
 
     assert args.criterion in ['wrong2correct', 'random'], 'currently only support selecting nodes with mode ' \
                                                           '``wrong2correct`` or ``random``'
-    node_idx_2flip, flipped_label = trainer.select_node(whole_data=whole_data, 
-                                                        num_classes=num_classes, 
-                                                        num_samples=args.num_samples, 
-                                                        criterion=args.criterion, 
+    node_idx_2flip, flipped_label = trainer.select_node(whole_data=whole_data,
+                                                        num_classes=num_classes,
+                                                        num_samples=args.num_samples,
+                                                        criterion=args.criterion,
                                                         from_valid_set=True)
-    
-    mixup_training_samples_idx, mixup_label = trainer.select_mixup_training_nodes(whole_data=whole_data, 
-                                                                                num_classes=num_classes, 
-                                                                                num_samples=args.num_samples, 
-                                                                                criterion=args.criterion, 
+
+    mixup_training_samples_idx, mixup_label = trainer.select_mixup_training_nodes(whole_data=whole_data,
+                                                                                num_classes=num_classes,
+                                                                                num_samples=args.num_samples,
+                                                                                criterion=args.criterion,
                                                                                 from_valid_set=True)
-                                                        
+    #pdb.set_trace()
     node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
     mixup_training_samples_idx, mixup_label =  mixup_training_samples_idx.cuda(), mixup_label.cuda()
 
     print(f'the calculated stats averaged over {args.num_samples} sequential edit '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
-    seq_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip, 
-                                        flipped_label=flipped_label, 
-                                        whole_data=whole_data, 
-                                        max_num_step=MAX_NUM_EDIT_STEPS, 
-                                        bef_edit_results=bef_edit_results, 
+    seq_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
+                                        flipped_label=flipped_label,
+                                        whole_data=whole_data,
+                                        max_num_step=MAX_NUM_EDIT_STEPS,
+                                        bef_edit_results=bef_edit_results,
                                         eval_setting='sequential',
                                         manner=args.manner,
-                                        mixup_training_samples_idx=mixup_training_samples_idx, 
+                                        mixup_training_samples_idx=mixup_training_samples_idx,
                                         mixup_label=mixup_label)
     print(seq_results)
 
     print(f'the calculated stats after {args.num_samples} independent edit '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
-    ind_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip, 
-                                        flipped_label=flipped_label, 
-                                        whole_data=whole_data, 
-                                        max_num_step=MAX_NUM_EDIT_STEPS, 
-                                        bef_edit_results=bef_edit_results, 
+    ind_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
+                                        flipped_label=flipped_label,
+                                        whole_data=whole_data,
+                                        max_num_step=MAX_NUM_EDIT_STEPS,
+                                        bef_edit_results=bef_edit_results,
                                         eval_setting='independent',
                                         manner=args.manner)
     print(ind_results)
 
     print(f'the calculated stats after batch edit with batch size {args.num_samples}, '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS_FOR_BATCH}')
-    batch_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip, 
-                                        flipped_label=flipped_label, 
-                                        whole_data=whole_data, 
-                                        max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH, 
-                                        bef_edit_results=bef_edit_results, 
+    batch_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
+                                        flipped_label=flipped_label,
+                                        whole_data=whole_data,
+                                        max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH,
+                                        bef_edit_results=bef_edit_results,
                                         eval_setting='batch',
                                         manner=args.manner)
     print(batch_results)
-    summary = {'seq_edit': seq_results, 
-               'ind_edit': ind_results, 
+    summary = {'seq_edit': seq_results,
+               'ind_edit': ind_results,
                'batch_edit': batch_results,
                'model_config': model_config}
-    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'  
+    root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'
     if not os.path.exists(root_json):
         os.makedirs(root_json)
     if args.manner == 'GD':

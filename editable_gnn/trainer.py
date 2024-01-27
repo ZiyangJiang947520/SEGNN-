@@ -262,7 +262,7 @@ class BaseTrainer(object):
             train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:self.num_mixup_training_samples]]
             mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
             mixup_label = whole_data.y[mixup_training_samples_idx]
-        
+
         return mixup_training_samples_idx, mixup_label
 
     def single_edit(self, model, idx, label, optimizer, max_num_step):
@@ -433,11 +433,11 @@ class BaseTrainer(object):
         #ipdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
             if mixup_training_samples_idx is not None:
-                edited_model, success, loss, steps = self.edit_select(model, 
-                                                                    torch.cat((node_idx_2flip[:idx + 1].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0), 
-                                                                    torch.cat((flipped_label[:idx + 1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0), 
-                                                                    optimizer, 
-                                                                    max_num_step, 
+                edited_model, success, loss, steps = self.edit_select(model,
+                                                                    torch.cat((node_idx_2flip[:idx + 1].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0),
+                                                                    torch.cat((flipped_label[:idx + 1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0),
+                                                                    optimizer,
+                                                                    max_num_step,
                                                                     manner)
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
