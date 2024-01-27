@@ -366,9 +366,13 @@ class BaseTrainer(object):
         model.eval()
         torch.cuda.synchronize()
         input = self.grab_input(self.whole_data)
-        input['x'] = input['x'][idx]
-        out = model(**input)
-        y_pred = out.argmax(dim=-1)
+        if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+            out = model.fast_forward(input['x'][idx], idx)
+            y_pred = out.argmax(dim=-1)
+        else:
+            out = model(**input)
+            y_pred = out.argmax(dim=-1)[idx]
+            
         # sequential or independent setting
         if label.shape[0] == 1:
             if y_pred == label:
