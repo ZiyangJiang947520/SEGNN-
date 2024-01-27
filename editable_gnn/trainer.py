@@ -57,6 +57,7 @@ class BaseTrainer(object):
         self.hyper_Diff = args.hyper_Diff if hasattr(args, 'hyper_Diff') else 0.0
         self.load_pretrained_backbone = load_pretrained_backbone
         self.num_mixup_training_samples = args.num_mixup_training_samples
+        self.between_edit_ftn = args.finetune_between_edit
 
 
     def train_loop(self,
@@ -372,7 +373,7 @@ class BaseTrainer(object):
         else:
             out = model(**input)
             y_pred = out.argmax(dim=-1)[idx]
-            
+
         # sequential or independent setting
         if label.shape[0] == 1:
             if y_pred == label:
@@ -385,11 +386,15 @@ class BaseTrainer(object):
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD'):
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, mixup_training_samples_idx = None, manner='GD'):
         bef_edit_success = self.bef_edit_check(model, idx, f_label)
         if bef_edit_success == 1.:
             return model, bef_edit_success, 0, 0
+
         assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus']
+
+        if self.between_edit_ftn:
+            self.between_edit_finetune_mlp(batch_size=512, iters=100, idx=mixup_training_samples_idx, random_sampling=False)
         if manner == 'GD':
             return self.single_edit(model, idx, f_label, optimizer, max_num_step)
         elif manner == 'GD_Diff':
@@ -462,7 +467,8 @@ class BaseTrainer(object):
                                                                     torch.cat((flipped_label[:idx + 1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0),
                                                                     optimizer,
                                                                     max_num_step,
-                                                                    manner)
+                                                                    manner = manner,
+                                                                    mixup_training_samples_idx =  mixup_training_samples_idx)
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
@@ -617,6 +623,9 @@ class BaseTrainer(object):
     def grab_input(self, data: Data, indices=None):
         return {"x": data.x}
 
+    def between_edit_finetune_mlp(self, batch_size, iters, idx, random_sampling=False):
+        pass
+
 
 class WholeGraphTrainer(BaseTrainer):
     def __init__(self,
@@ -727,3 +736,35 @@ class WholeGraphTrainer(BaseTrainer):
         torch.cuda.synchronize()
         e = time.time()
         print(f'fine tune MLP used: {e - s} sec.')
+
+    def between_edit_finetune_mlp(self, batch_size, iters, idx, random_sampling=False):
+        input = self.grab_input(self.train_data)
+        self.model.eval()
+        # get the original GNN output embedding
+        self.model.mlp_freezed = True
+        with torch.no_grad():
+            gnn_output = self.model(**input)
+            log_gnn_output = F.log_softmax(gnn_output, dim=-1)
+        # here we enable the MLP to be trained
+        self.model.freeze_module(train=False)
+        opt = self.get_optimizer(self.model_config, self.model)
+        print('start finetuning MLP between editing')
+        s = time.time()
+        torch.cuda.synchronize()
+        for i in tqdm(range(iters)):
+            opt.zero_grad()
+            if random_sampling:
+                 idx = np.random.choice(self.train_data.num_nodes, batch_size)
+            idx = torch.from_numpy(idx).to(gnn_output.device)
+            MLP_output = self.model.MLP(self.train_data.x[idx])
+            # MLP_output = self.model.MLP(self.model.convs._cached_x[idx])
+            cur_batch_gnn_output = gnn_output[idx]
+            log_prob = F.log_softmax(MLP_output + cur_batch_gnn_output, dim=-1)
+            main_loss = F.cross_entropy(MLP_output + gnn_output[idx], self.train_data.y[idx])
+            kl_loss = F.kl_div(log_prob, log_gnn_output[idx], log_target=True, reduction='batchmean')
+            # import ipdb; ipdb.set_trace()
+            (kl_loss + main_loss).backward()
+            opt.step()
+        torch.cuda.synchronize()
+        e = time.time()
+        # print(f'fine tune MLP used: {e - s} sec.')

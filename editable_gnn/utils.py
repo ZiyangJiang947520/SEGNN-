@@ -99,3 +99,16 @@ def safe_backward(loss, parameters, accumulate=1, allow_unused=False):
                 p.grad = g / accumulate
             else:
                 p.grad += g / accumulate
+
+def str2bool(x):
+    """
+    hack to allow wandb to tune boolean cmd args
+    :param x: str of bool
+    :return: bool
+    """
+    if type(x) == bool:
+        return x
+    elif type(x) == str:
+        return bool(strtobool(x))
+    else:
+        raise ValueError(f'Unrecognised type {type(x)}')

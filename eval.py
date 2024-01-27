@@ -9,6 +9,7 @@ import yaml
 import editable_gnn.models as models
 from data import get_data, prepare_dataset
 from editable_gnn import WholeGraphTrainer, BaseTrainer, set_seeds_all
+from editable_gnn.utils import str2bool
 
 
 parser = argparse.ArgumentParser()
@@ -33,6 +34,8 @@ parser.add_argument('--manner', type=str, required=True, default='GD', \
 parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
 parser.add_argument('--train_split', default=1, type=int, help='Training data split number for EDG_Plus')
 parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
+parser.add_argument('--finetune_between_edit', type=str2bool, default=False,
+                        help="whether to finetune the MLP between editing")
 
 MAX_NUM_EDIT_STEPS = 200
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
