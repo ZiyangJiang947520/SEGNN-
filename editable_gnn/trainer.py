@@ -18,7 +18,7 @@ from editable_gnn.models.base import BaseModel
 from editable_gnn.logger import Logger
 from editable_gnn.utils import set_seeds_all, kl_logit, ada_kl_logit
 from editable_gnn.edg import EDG, EDG_Plus
-
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 class BaseTrainer(object):
     def __init__(self,
                  args,
@@ -258,7 +258,7 @@ class BaseTrainer(object):
         assert criterion in ['wrong2correct', 'random']
         if criterion == 'wrong2correct':
             right_pred_set = train_y_pred.eq(train_y_true).nonzero()
-            train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:self.num_mixup_training_samples]]
+            train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]]
             mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
             mixup_label = whole_data.y[mixup_training_samples_idx]
 
@@ -386,7 +386,7 @@ class BaseTrainer(object):
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = None):
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([])):
         bef_edit_success = self.bef_edit_check(model, idx, f_label)
         if bef_edit_success == 1.:
             return model, bef_edit_success, 0, 0
@@ -396,7 +396,7 @@ class BaseTrainer(object):
         random_sampling = False
         if self.between_edit_ftn and model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP'] and (random_sampling or mixup_training_samples_idx.size(0) > 0):
             #pdb.set_trace()
-            self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx, random_sampling=random_sampling)
+            self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx.squeeze(dim=1), random_sampling=random_sampling)
 
         if manner == 'GD':
             return self.single_edit(model, idx, f_label, optimizer, max_num_step)
@@ -464,14 +464,16 @@ class BaseTrainer(object):
         results_temporary = []
         #pdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
+            set_seeds_all(idx)
+            mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
                 edited_model, success, loss, steps = self.edit_select(model,
-                                                                    torch.cat((node_idx_2flip[:idx + 1].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0),
-                                                                    torch.cat((flipped_label[:idx + 1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0),
+                                                                    torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0),
+                                                                    torch.cat((flipped_label[idx], mixup_label.squeeze(dim=1)), dim=0),
                                                                     optimizer,
                                                                     max_num_step,
                                                                     manner = manner,
-                                                                    mixup_training_samples_idx =  mixup_training_samples_idx)
+                                                                    mixup_training_samples_idx =  torch.Tensor([]))
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
@@ -741,7 +743,10 @@ class WholeGraphTrainer(BaseTrainer):
         print(f'fine tune MLP used: {e - s} sec.')
 
     def between_edit_finetune_mlp(self, batch_size, iters, idx, random_sampling=False):
-        input = self.grab_input(self.train_data)
+        input = self.grab_input(self.whole_data)
+        if random_sampling:
+            idx, labels = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = batch_size)
+        idx = idx.to(input['x'].device)
         self.model.eval()
         # get the original GNN output embedding
         self.model.mlp_freezed = True
@@ -753,19 +758,15 @@ class WholeGraphTrainer(BaseTrainer):
         opt = self.get_optimizer(self.model_config, self.model)
         #print('start finetuning MLP between editing')
         s = time.time()
+        #pdb.set_trace()
         torch.cuda.synchronize()
         for i in tqdm(range(iters)):
             opt.zero_grad()
-            if random_sampling:
-                idx = np.random.choice(self.train_data.num_nodes, batch_size)
-                idx = torch.from_numpy(idx).to(gnn_output.device)
-            else:
-                idx = idx.to(gnn_output.device)
-            MLP_output = self.model.MLP(self.train_data.x[idx])
+            MLP_output = self.model.MLP(input['x'][idx])
             # MLP_output = self.model.MLP(self.model.convs._cached_x[idx])
             cur_batch_gnn_output = gnn_output[idx]
             log_prob = F.log_softmax(MLP_output + cur_batch_gnn_output, dim=-1)
-            main_loss = F.cross_entropy(MLP_output + gnn_output[idx], self.train_data.y[idx])
+            main_loss = F.cross_entropy(MLP_output + gnn_output[idx], self.whole_data.y[idx])
             kl_loss = F.kl_div(log_prob, log_gnn_output[idx], log_target=True, reduction='batchmean')
             # import ipdb; ipdb.set_trace()
             (kl_loss + main_loss).backward()
