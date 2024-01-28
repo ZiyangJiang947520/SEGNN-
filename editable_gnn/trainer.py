@@ -386,15 +386,18 @@ class BaseTrainer(object):
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, mixup_training_samples_idx = None, manner='GD'):
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = None):
         bef_edit_success = self.bef_edit_check(model, idx, f_label)
         if bef_edit_success == 1.:
             return model, bef_edit_success, 0, 0
 
         assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus']
 
-        if self.between_edit_ftn:
-            self.between_edit_finetune_mlp(batch_size=512, iters=100, idx=mixup_training_samples_idx, random_sampling=False)
+        random_sampling = False
+        if self.between_edit_ftn and model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP'] and (random_sampling or mixup_training_samples_idx.size(0) > 0):
+            #pdb.set_trace()
+            self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx, random_sampling=random_sampling)
+
         if manner == 'GD':
             return self.single_edit(model, idx, f_label, optimizer, max_num_step)
         elif manner == 'GD_Diff':
@@ -748,14 +751,16 @@ class WholeGraphTrainer(BaseTrainer):
         # here we enable the MLP to be trained
         self.model.freeze_module(train=False)
         opt = self.get_optimizer(self.model_config, self.model)
-        print('start finetuning MLP between editing')
+        #print('start finetuning MLP between editing')
         s = time.time()
         torch.cuda.synchronize()
         for i in tqdm(range(iters)):
             opt.zero_grad()
             if random_sampling:
-                 idx = np.random.choice(self.train_data.num_nodes, batch_size)
-            idx = torch.from_numpy(idx).to(gnn_output.device)
+                idx = np.random.choice(self.train_data.num_nodes, batch_size)
+                idx = torch.from_numpy(idx).to(gnn_output.device)
+            else:
+                idx = idx.to(gnn_output.device)
             MLP_output = self.model.MLP(self.train_data.x[idx])
             # MLP_output = self.model.MLP(self.model.convs._cached_x[idx])
             cur_batch_gnn_output = gnn_output[idx]
