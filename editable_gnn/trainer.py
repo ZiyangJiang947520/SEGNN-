@@ -469,8 +469,8 @@ class BaseTrainer(object):
         results_temporary = []
         #pdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
-            #set_seeds_all(idx)
-            #mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = self.num_mixup_training_samples)
+            set_seeds_all(idx)
+            mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
                 edited_model, success, loss, steps = self.edit_select(model,
                                                                     torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0),

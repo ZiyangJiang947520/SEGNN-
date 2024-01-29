@@ -35,6 +35,7 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --num_mixup_training_samples 50 \
         --finetune_between_edit False \
         --stop_edit_only True \
+        --iters_before_stop 5 \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
 done
