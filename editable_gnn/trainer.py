@@ -702,10 +702,16 @@ class WholeGraphTrainer(BaseTrainer):
             else:
                 if self.stop_edit_only and y_pred[0] == label[0]:
                     success = 1.
-                    break
+                    if self.iters_before_stop == 0:
+                        break
+                    else:
+                        self.iters_before_stop -= 1
                 success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
-                    break
+                    if self.iters_before_stop == 0:
+                        break
+                    else:
+                        self.iters_before_stop -= 1
         torch.cuda.synchronize()
         e = time.time()
         print(f'max allocated mem: {torch.cuda.max_memory_allocated() / (1024**2)} MB')
