@@ -464,8 +464,8 @@ class BaseTrainer(object):
         results_temporary = []
         #pdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
-            set_seeds_all(idx)
-            mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = self.num_mixup_training_samples)
+            #set_seeds_all(idx)
+            #mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
                 edited_model, success, loss, steps = self.edit_select(model,
                                                                     torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0),
@@ -473,7 +473,7 @@ class BaseTrainer(object):
                                                                     optimizer,
                                                                     max_num_step,
                                                                     manner = manner,
-                                                                    mixup_training_samples_idx =  torch.Tensor([]))
+                                                                    mixup_training_samples_idx = torch.Tensor([]))
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
@@ -747,6 +747,8 @@ class WholeGraphTrainer(BaseTrainer):
         if random_sampling:
             idx, labels = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = batch_size)
         idx = idx.to(input['x'].device)
+        #input['x'] = input['x'][idx]
+        #pdb.set_trace()
         self.model.eval()
         # get the original GNN output embedding
         self.model.mlp_freezed = True
