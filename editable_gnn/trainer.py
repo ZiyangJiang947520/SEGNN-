@@ -58,6 +58,7 @@ class BaseTrainer(object):
         self.load_pretrained_backbone = load_pretrained_backbone
         self.num_mixup_training_samples = args.num_mixup_training_samples
         self.between_edit_ftn = args.finetune_between_edit
+        self.stop_edit_only = args.stop_edit_only
 
 
     def train_loop(self,
@@ -286,6 +287,9 @@ class BaseTrainer(object):
                     success = False
             # batch setting
             else:
+                if self.stop_edit_only and y_pred[0] == label[0]:
+                    success = 1.
+                    break
                 success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
                     break

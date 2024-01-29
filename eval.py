@@ -36,6 +36,8 @@ parser.add_argument('--train_split', default=1, type=int, help='Training data sp
 parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
 parser.add_argument('--finetune_between_edit', type=str2bool, default=False,
                         help="whether to finetune the MLP between editing")
+parser.add_argument('--stop_edit_only', type=str2bool, default=False,
+                        help="whether to stop when the edit target is correct")
 
 MAX_NUM_EDIT_STEPS = 200
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
