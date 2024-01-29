@@ -59,6 +59,7 @@ class BaseTrainer(object):
         self.num_mixup_training_samples = args.num_mixup_training_samples
         self.between_edit_ftn = args.finetune_between_edit
         self.stop_edit_only = args.stop_edit_only
+        self.iters_before_stop = args.iters_before_stop
 
 
     def train_loop(self,
@@ -699,6 +700,9 @@ class WholeGraphTrainer(BaseTrainer):
                     success = False
             # batch setting
             else:
+                if self.stop_edit_only and y_pred[0] == label[0]:
+                    success = 1.
+                    break
                 success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
                     break
