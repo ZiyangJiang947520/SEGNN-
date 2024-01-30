@@ -500,6 +500,11 @@ class BaseTrainer(object):
         bef_edit_tra_acc, bef_edit_val_acc, bef_edit_tst_acc = bef_edit_results
         bef_edit_hop_acc = {}
         N_HOP = 3
+        success_rate = 0
+        hop_drawdown = {}
+        average_dd = []
+        highest_dd = []
+        lowest_dd = []
         #pdb.set_trace()
         for n_hop in range(1, N_HOP + 1):
             bef_edit_hop_acc[n_hop] = []
@@ -545,8 +550,15 @@ class BaseTrainer(object):
             test_std = None
             #ipdb.set_trace()
 
-            success_rate = succeses[-1]
+            success_rate = np.mean(succeses)
             hop_drawdown = {}
+            average_dd = np.round(np.mean(np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals=3) * 100
+            test_drawdown = [test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown]
+            highest_dd = max(enumerate(test_drawdown), key=lambda x: x[1])
+            lowest_dd = min(enumerate(test_drawdown), key=lambda x: x[1])
+            if len(test_acc) > 100:
+                 idx = [i*100 for i in range(len(test_acc) // 100)]
+                 average_dd = list(zip(test_drawdown[idx], successes[idx]))
         else:
             raise NotImplementedError
         return dict(bef_edit_tra_acc=bef_edit_tra_acc,
@@ -554,13 +566,16 @@ class BaseTrainer(object):
                     bef_edit_tst_acc=bef_edit_tst_acc,
                     tra_drawdown=tra_drawdown * 100,
                     val_drawdown=val_drawdown * 100,
-                    test_drawdown=[test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown],
+                    test_drawdown=test_drawdown,
                     tra_std=tra_std,
                     val_std=val_std,
                     test_std=test_std,
                     success_rate=success_rate,
                     mean_complexity=np.mean(steps),
                     hop_drawdown=hop_drawdown,
+                    average_dd = average_dd,
+                    highest_dd = highest_dd,
+                    lowest_dd = lowest_dd,
                     )
 
     def eval_edit_generalization_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results,

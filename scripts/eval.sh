@@ -32,10 +32,10 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --output_dir ${output_dir} \
         --saved_model_path ${save_dir_root}/${dataset} \
         --manner ${manner} \
-        --num_mixup_training_samples 50 \
+        --num_mixup_training_samples 100 \
         --finetune_between_edit False \
-        --stop_edit_only True \
-        --iters_before_stop 5 \
+        --stop_edit_only False \
+        --iters_before_stop 0 \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
 done
