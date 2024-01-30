@@ -60,6 +60,8 @@ class BaseTrainer(object):
         self.between_edit_ftn = args.finetune_between_edit
         self.stop_edit_only = args.stop_edit_only
         self.iters_before_stop = args.iters_before_stop
+        self.full_edit = args.full_edit
+        self.mixup_k_nearest_neighbors = args.mixup_k_nearest_neighbors
 
 
     def train_loop(self,
@@ -248,7 +250,8 @@ class BaseTrainer(object):
     def select_mixup_training_nodes(self,
                                     whole_data: Data,
                                     criterion: str,
-                                    num_samples:int = 0):
+                                    num_samples:int = 0,
+                                    center_node_idx=None):
         self.model.eval()
         bef_edit_logits = self.prediction(self.model, whole_data)
         bef_edit_pred = bef_edit_logits.argmax(dim=-1)
@@ -260,13 +263,22 @@ class BaseTrainer(object):
         assert criterion in ['wrong2correct', 'random']
         if criterion == 'wrong2correct':
             right_pred_set = train_y_pred.eq(train_y_true).nonzero()
-            train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]]
+            if center_node_idx != None:
+                neighbors = torch.Tensor([])
+                num_hop = 0
+                while len(neighbors) < num_samples and num_hop < 4:
+                    num_hop += 1
+                    neighbors, _, _, _ = k_hop_subgraph(center_node_idx, num_hops=num_hop, edge_index=self.whole_data.edge_index)
+                dvc = right_pred_set.device
+                right_pred_set = torch.Tensor(right_pred_set.cpu().numpy().intersection(neighbors.cpu().numpy())).to(dvc)
+            else:
+                train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]]
             mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
             mixup_label = whole_data.y[mixup_training_samples_idx]
 
         return mixup_training_samples_idx, mixup_label
 
-    def single_edit(self, model, idx, label, optimizer, max_num_step):
+    def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit = False):
         model.train()
         s = time.time()
         torch.cuda.synchronize()
@@ -391,7 +403,7 @@ class BaseTrainer(object):
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([])):
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([]), time_to_full_edit = False):
         bef_edit_success = self.bef_edit_check(model, idx, f_label)
         if bef_edit_success == 1.:
             return model, bef_edit_success, 0, 0
@@ -404,7 +416,7 @@ class BaseTrainer(object):
             self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx.squeeze(dim=1), random_sampling=random_sampling)
 
         if manner == 'GD':
-            return self.single_edit(model, idx, f_label, optimizer, max_num_step)
+            return self.single_edit(model, idx, f_label, optimizer, max_num_step, time_to_full_edit = time_to_full_edit)
         elif manner == 'GD_Diff':
             return self.single_Diff_edit(model, idx, f_label, optimizer, max_num_step)
         elif manner == 'Ada_GD_Diff':
@@ -470,7 +482,15 @@ class BaseTrainer(object):
         #pdb.set_trace()
         for idx in tqdm(range(len(node_idx_2flip))):
             set_seeds_all(idx)
-            mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 'wrong2correct', num_samples = self.num_mixup_training_samples)
+            if self.mixup_k_nearest_neighbors:
+                mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 
+                                                                                        'wrong2correct', 
+                                                                                        num_samples = self.num_mixup_training_samples,
+                                                                                        center_node_idx=node_idx_2flip[idx])
+            else:
+                mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 
+                                                                                        'wrong2correct', 
+                                                                                        num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
                 edited_model, success, loss, steps = self.edit_select(model,
                                                                     torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0),
@@ -478,7 +498,8 @@ class BaseTrainer(object):
                                                                     optimizer,
                                                                     max_num_step,
                                                                     manner = manner,
-                                                                    mixup_training_samples_idx = torch.Tensor([]))
+                                                                    mixup_training_samples_idx = torch.Tensor([]),
+                                                                    time_to_full_edit = (idx > 0 and idx % 10 == 0))
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
@@ -688,7 +709,7 @@ class WholeGraphTrainer(BaseTrainer):
         return {"x": data.x, 'adj_t': data.adj_t}
 
 
-    def single_edit(self, model, idx, label, optimizer, max_num_step):
+    def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit=False):
         s = time.time()
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
@@ -697,9 +718,17 @@ class WholeGraphTrainer(BaseTrainer):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
             if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
-                out = model.fast_forward(input['x'][idx], idx)
-                loss = self.loss_op(out, label)
-                y_pred = out.argmax(dim=-1)
+                if self.full_edit and time_to_full_edit:
+                    self.model.freeze_module()
+                    self.freeze_layer(self.MLP, freeze=False)
+                    self.mlp_freezed = False
+                    out = model(**input)
+                    loss = self.loss_op(out[idx], label)
+                    y_pred = out.argmax(dim=-1)[idx]
+                else:
+                    out = model.fast_forward(input['x'][idx], idx)
+                    loss = self.loss_op(out, label)
+                    y_pred = out.argmax(dim=-1)
             else:
                 out = model(**input)
                 loss = self.loss_op(out[idx], label)

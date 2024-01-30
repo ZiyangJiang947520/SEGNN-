@@ -40,6 +40,10 @@ parser.add_argument('--stop_edit_only', type=str2bool, default=False,
                         help="whether to stop when the edit target is correct")
 parser.add_argument('--iters_before_stop', type=int, default=0,
                         help="more iterations to run before full stopping")
+parser.add_argument('--full_edit', type=str2bool, default=False,
+                        help="whether to edit both the gnn and mlp")
+parser.add_argument('--mixup_k_nearest_neighbors', type=str2bool, default=False,
+                        help="whether to sample k nearest neighbors for training mixup")
 
 MAX_NUM_EDIT_STEPS = 200
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
