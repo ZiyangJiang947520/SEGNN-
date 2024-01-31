@@ -263,23 +263,23 @@ class BaseTrainer(object):
         assert criterion in ['wrong2correct', 'random']
         if criterion == 'wrong2correct':
             right_pred_set = train_y_pred.eq(train_y_true).nonzero()
+            dvc = right_pred_set.device
             if center_node_idx != None:
                 neighbors = torch.Tensor([])
                 num_hop = 0
                 while len(neighbors) < num_samples and num_hop < 4:
                     num_hop += 1
                     neighbors, _, _, _ = k_hop_subgraph(center_node_idx, num_hops=num_hop, edge_index=self.whole_data.edge_index)
-                dvc = right_pred_set.device
                 right_pred_set = right_pred_set.squeeze().cpu().numpy().tolist()
                 neighbors = neighbors.cpu().numpy().tolist()
                 #pdb.set_trace()
-                right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).to(dvc).type(torch.LongTensor)
-            
-            half_half = False
+                right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).type(torch.LongTensor).to(dvc)
+
+            half_half = True
             if half_half:
-                train_pred_set = train_y_pred.eq(train_y_true).nonzero()
+                train_pred_set = train_y_pred.eq(train_y_true).nonzero().to(dvc)
                 train_mixup_training_samples_idx = torch.cat((
-                                                            right_pred_set[torch.randperm(len(right_pred_set))[:num_samples // 2]].type(torch.LongTensor), 
+                                                            right_pred_set[torch.randperm(len(right_pred_set))[:num_samples // 2]].type(torch.LongTensor).to(dvc),
                                                             train_pred_set[torch.randperm(len(train_pred_set))[num_samples // 2:num_samples]]), dim=0)
             else:
                 train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]].type(torch.LongTensor)
