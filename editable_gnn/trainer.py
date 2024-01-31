@@ -274,7 +274,15 @@ class BaseTrainer(object):
                 neighbors = neighbors.cpu().numpy().tolist()
                 #pdb.set_trace()
                 right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).to(dvc).type(torch.LongTensor)
-            train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]].type(torch.LongTensor)
+            
+            half_half = False
+            if half_half:
+                train_pred_set = train_y_pred.eq(train_y_true).nonzero()
+                train_mixup_training_samples_idx = torch.cat((
+                                                            right_pred_set[torch.randperm(len(right_pred_set))[:num_samples // 2]].type(torch.LongTensor), 
+                                                            train_pred_set[torch.randperm(len(train_pred_set))[num_samples // 2:num_samples]]), dim=0)
+            else:
+                train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]].type(torch.LongTensor)
             #pdb.set_trace()
             mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
             mixup_label = whole_data.y[mixup_training_samples_idx]
