@@ -590,7 +590,12 @@ class BaseTrainer(object):
             lowest_dd = min(enumerate(test_drawdown), key=lambda x: x[1])
             if len(test_acc) > 100:
                  idx = [i*100 for i in range(len(test_acc) // 100)]
-                 average_dd = list(zip(test_drawdown[idx], successes[idx]))
+                 dd = []
+                 sc = []
+                 for i in idx:
+                     dd.append(test_drawdown[i])
+                     sc.append(succeses[i])
+                 average_dd = list(zip(dd, sc))
         else:
             raise NotImplementedError
         return dict(bef_edit_tra_acc=bef_edit_tra_acc,
