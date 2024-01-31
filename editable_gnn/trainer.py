@@ -62,6 +62,8 @@ class BaseTrainer(object):
         self.iters_before_stop = args.iters_before_stop
         self.full_edit = args.full_edit
         self.mixup_k_nearest_neighbors = args.mixup_k_nearest_neighbors
+        self.incremental_batching = args.incremental_batching
+        self.sliding_batching = args.sliding_batching
 
 
     def train_loop(self,
@@ -289,7 +291,7 @@ class BaseTrainer(object):
 
         return mixup_training_samples_idx, mixup_label
 
-    def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit = False):
+    def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit = False, num_edit_targets=1):
         model.train()
         s = time.time()
         torch.cuda.synchronize()
@@ -311,10 +313,10 @@ class BaseTrainer(object):
                     success = False
             # batch setting
             else:
-                if self.stop_edit_only and y_pred[0] == label[0]:
-                    success = 1.
-                    break
-                success = int(y_pred.eq(label).sum()) / label.size(0)
+                if self.stop_edit_only:
+                    success = int(y_pred[:num_edit_targets - 1].eq(label)[:num_edit_targets - 1].sum()) / num_edit_targets
+                else:
+                    success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
                     break
         torch.cuda.synchronize()
@@ -503,14 +505,29 @@ class BaseTrainer(object):
                                                                                         'wrong2correct',
                                                                                         num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
+                nodes = torch.Tensor([])
+                labels = torch.Tensors([])
+                if self.incremental_batching:
+                    nodes = torch.cat((node_idx_2flip[:idx+1].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0)
+                    labels = torch.cat((flipped_label[:idx+1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0)
+                    num_edit_targets = idx + 1
+                elif self.sliding_batching > 0:
+                    nodes = torch.cat((node_idx_2flip[idx:min(idx + self.sliding_batching, len(node_idx_2flip))].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0)
+                    labels = torch.cat((flipped_label[idx:min(idx + self.sliding_batching, len(node_idx_2flip))].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0)
+                    num_edit_targets = self.sliding_batching
+                else:
+                    nodes = torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0)
+                    labels = torch.cat((flipped_label[idx], mixup_label.squeeze(dim=1)), dim=0)
+                    num_edit_targets = idx
                 edited_model, success, loss, steps = self.edit_select(model,
-                                                                    torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0),
-                                                                    torch.cat((flipped_label[idx], mixup_label.squeeze(dim=1)), dim=0),
+                                                                    nodes,
+                                                                    labels,
                                                                     optimizer,
                                                                     max_num_step,
                                                                     manner = manner,
                                                                     mixup_training_samples_idx = torch.Tensor([]),
-                                                                    time_to_full_edit = (idx > 0 and idx % 10 == 0))
+                                                                    time_to_full_edit = (idx > 0 and idx % 10 == 0),
+                                                                    num_edit_targets=num_edit_targets)
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             res = [*self.test(edited_model, whole_data), success, steps]
@@ -725,7 +742,7 @@ class WholeGraphTrainer(BaseTrainer):
         return {"x": data.x, 'adj_t': data.adj_t}
 
 
-    def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit=False):
+    def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit=False,num_edit_targets=1):
         s = time.time()
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
@@ -761,13 +778,10 @@ class WholeGraphTrainer(BaseTrainer):
                     success = False
             # batch setting
             else:
-                if self.stop_edit_only and y_pred[0] == label[0]:
-                    success = 1.
-                    if self.iters_before_stop == 0:
-                        break
-                    else:
-                        self.iters_before_stop -= 1
-                success = int(y_pred.eq(label).sum()) / label.size(0)
+                if self.stop_edit_only:
+                    success = int(y_pred[:num_edit_targets - 1].eq(label)[:num_edit_targets - 1].sum()) / num_edit_targets
+                else:
+                    success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
                     if self.iters_before_stop == 0:
                         break

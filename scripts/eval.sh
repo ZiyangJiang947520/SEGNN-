@@ -38,6 +38,8 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --iters_before_stop 0 \
         --full_edit False \
         --mixup_k_nearest_neighbors True \
+        --incremental_batching True \
+        --sliding_batching 0 \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
 done

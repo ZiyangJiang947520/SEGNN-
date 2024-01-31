@@ -44,6 +44,10 @@ parser.add_argument('--full_edit', type=str2bool, default=False,
                         help="whether to edit both the gnn and mlp")
 parser.add_argument('--mixup_k_nearest_neighbors', type=str2bool, default=False,
                         help="whether to sample k nearest neighbors for training mixup")
+parser.add_argument('--incremental_batching', type=str2bool, default=False,
+                        help="whether to do incremental batching edit")
+parser.add_argument('--sliding_batching', type=int, default=0,
+                        help="whether to do sliding batching edit")
 
 MAX_NUM_EDIT_STEPS = 200
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
@@ -184,7 +188,20 @@ if __name__ == '__main__':
     if not os.path.exists(root_json):
         os.makedirs(root_json)
     if args.manner == 'GD':
-        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
+        json_name = root_json
+        if args.stop_edit_only:
+            json_name += "_stop_edit_only_"
+        if args.num_mixup_training_samples > 0:
+            json_name += f"_{args.num_mixup_training_samples}_mixup_"
+        if args.full_edit:
+            json_name += "_full_edit_"
+        if args.mixup_k_nearest_neighbors:
+            json_name += "_knn_"
+        if args.incremental_batching:
+            json_name += "_incremental_batching_"
+        if args.sliding_batching > 0:
+            json_name += "_sling_batching_"
+        json_name += + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
     elif args.manner == 'Ada_GD_Diff':
