@@ -20,7 +20,7 @@ criterion=wrong2correct
 ## cora flickr reddit2 arxiv amazoncomputers amazonphoto coauthorcs coauthorphysics yelp products
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in cora amazoncomputers amazonphoto coauthorcs reddit2 arxiv; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for dataset in arxiv cora amazoncomputers amazonphoto coauthorcs; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
@@ -37,6 +37,7 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --stop_edit_only False \
         --iters_before_stop 0 \
         --full_edit True \
+        --mixup_k_nearest_neighbors True \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
 done

@@ -270,9 +270,12 @@ class BaseTrainer(object):
                     num_hop += 1
                     neighbors, _, _, _ = k_hop_subgraph(center_node_idx, num_hops=num_hop, edge_index=self.whole_data.edge_index)
                 dvc = right_pred_set.device
-                right_pred_set = torch.Tensor(right_pred_set.cpu().numpy().intersection(neighbors.cpu().numpy())).to(dvc)
-            else:
-                train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]]
+                right_pred_set = right_pred_set.squeeze().cpu().numpy().tolist()
+                neighbors = neighbors.cpu().numpy().tolist()
+                #pdb.set_trace()
+                right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).to(dvc).type(torch.LongTensor)
+            train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]].type(torch.LongTensor)
+            #pdb.set_trace()
             mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
             mixup_label = whole_data.y[mixup_training_samples_idx]
 
@@ -483,13 +486,13 @@ class BaseTrainer(object):
         for idx in tqdm(range(len(node_idx_2flip))):
             set_seeds_all(idx)
             if self.mixup_k_nearest_neighbors:
-                mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 
-                                                                                        'wrong2correct', 
+                mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data,
+                                                                                        'wrong2correct',
                                                                                         num_samples = self.num_mixup_training_samples,
                                                                                         center_node_idx=node_idx_2flip[idx])
             else:
-                mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data, 
-                                                                                        'wrong2correct', 
+                mixup_training_samples_idx, mixup_label = self.select_mixup_training_nodes(self.whole_data,
+                                                                                        'wrong2correct',
                                                                                         num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
                 edited_model, success, loss, steps = self.edit_select(model,
@@ -588,15 +591,15 @@ class BaseTrainer(object):
                     tra_drawdown=tra_drawdown * 100,
                     val_drawdown=val_drawdown * 100,
                     test_drawdown=test_drawdown,
-                    tra_std=tra_std,
-                    val_std=val_std,
-                    test_std=test_std,
                     success_rate=success_rate,
-                    mean_complexity=np.mean(steps),
-                    hop_drawdown=hop_drawdown,
                     average_dd = average_dd,
                     highest_dd = highest_dd,
                     lowest_dd = lowest_dd,
+                    mean_complexity=np.mean(steps),
+                    hop_drawdown=hop_drawdown,
+                    tra_std=tra_std,
+                    val_std=val_std,
+                    test_std=test_std,
                     )
 
     def eval_edit_generalization_quality(self, node_idx_2flip, flipped_label, whole_data, max_num_step, bef_edit_results,
@@ -720,11 +723,12 @@ class WholeGraphTrainer(BaseTrainer):
             if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
                 if self.full_edit and time_to_full_edit:
                     self.model.freeze_module()
-                    self.freeze_layer(self.MLP, freeze=False)
-                    self.mlp_freezed = False
-                    out = model(**input)
-                    loss = self.loss_op(out[idx], label)
-                    y_pred = out.argmax(dim=-1)[idx]
+                    self.model.freeze_layer(self.model.MLP, freeze=False)
+                    out = model(**input)[idx]
+                    self.model.mlp_freezed = False
+                    out += self.model.MLP(input['x'][idx])
+                    loss = self.loss_op(out, label)
+                    y_pred = out.argmax(dim=-1)
                 else:
                     out = model.fast_forward(input['x'][idx], idx)
                     loss = self.loss_op(out, label)
