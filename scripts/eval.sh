@@ -34,13 +34,13 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --manner ${manner} \
         --num_mixup_training_samples 100 \
         --finetune_between_edit False \
-        --stop_edit_only True \
+        --stop_edit_only False \
         --stop_full_edit False \
-        --half_half True \
+        --half_half False \
         --iters_before_stop 0 \
         --full_edit False \
-        --mixup_k_nearest_neighbors True \
-        --incremental_batching True \
+        --mixup_k_nearest_neighbors False \
+        --incremental_batching False \
         --sliding_batching 0 \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done

@@ -516,11 +516,11 @@ class BaseTrainer(object):
                 elif self.sliding_batching > 0:
                     nodes = torch.cat((node_idx_2flip[idx:min(idx + self.sliding_batching, len(node_idx_2flip))].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0)
                     labels = torch.cat((flipped_label[idx:min(idx + self.sliding_batching, len(node_idx_2flip))].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0)
-                    num_edit_targets = self.sliding_batching
+                    num_edit_targets = min(self.sliding_batching, len(node_idx_2flip) - idx)
                 else:
                     nodes = torch.cat((node_idx_2flip[idx], mixup_training_samples_idx.squeeze(dim=1)), dim=0)
                     labels = torch.cat((flipped_label[idx], mixup_label.squeeze(dim=1)), dim=0)
-                    num_edit_targets = idx
+                    num_edit_targets = 1
                 edited_model, success, loss, steps = self.edit_select(model,
                                                                     nodes,
                                                                     labels,
@@ -710,7 +710,7 @@ class BaseTrainer(object):
 
     def between_edit_finetune_mlp(self, batch_size, iters, idx, random_sampling=False):
         pass
-    
+
     def success_rate(self, model, idx, label):
         pass
 
