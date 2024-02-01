@@ -597,10 +597,10 @@ class BaseTrainer(object):
             success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
             success_list = np.round(np.array(succeses), decimals = 3).tolist()
             table_result = {
-                '1': (test_drawdown[1], success_list[1]),
-                '10': (test_drawdown[10], success_list[10]),
-                '25': (test_drawdown[25], success_list[25]),
-                '50': (test_drawdown[50], success_list[50])
+                '1': (test_drawdown[0], success_list[0]),
+                '10': (test_drawdown[9], success_list[9]),
+                '25': (test_drawdown[24], success_list[24]),
+                '50': (test_drawdown[49], success_list[49])
             }
             hop_drawdown = {}
         elif eval_setting == 'independent' :
@@ -639,10 +639,10 @@ class BaseTrainer(object):
             highest_dd = max(enumerate(test_drawdown), key=lambda x: x[1])
             lowest_dd = min(enumerate(test_drawdown), key=lambda x: x[1])
             table_result = {
-                '1': (test_drawdown[1], success_list[1]),
-                '10': (test_drawdown[10], success_list[10]),
-                '25': (test_drawdown[25], success_list[25]),
-                '50': (test_drawdown[50], success_list[50])
+                '1': (test_drawdown[0], success_list[0]),
+                '10': (test_drawdown[9], success_list[9]),
+                '25': (test_drawdown[24], success_list[24]),
+                '50': (test_drawdown[49], success_list[49])
             }
             if len(test_acc) > 100:
                  idx = [i*100 for i in range(len(test_acc) // 100)]
