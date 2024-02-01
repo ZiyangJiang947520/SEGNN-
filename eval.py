@@ -48,6 +48,8 @@ parser.add_argument('--mixup_k_nearest_neighbors', type=str2bool, default=False,
                         help="whether to sample k nearest neighbors for training mixup")
 parser.add_argument('--incremental_batching', type=str2bool, default=False,
                         help="whether to do incremental batching edit")
+parser.add_argument('--half_half', type=str2bool, default=False,
+                        help="half and half mixup")
 parser.add_argument('--sliding_batching', type=int, default=0,
                         help="whether to do sliding batching edit")
 
@@ -205,6 +207,8 @@ if __name__ == '__main__':
             json_name += "_incremental_batching_"
         if args.sliding_batching > 0:
             json_name += "_sling_batching_"
+        if args.half_half:
+            json_name += "_halfhalf_"
         json_name += f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'

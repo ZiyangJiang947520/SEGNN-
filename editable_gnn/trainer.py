@@ -65,6 +65,7 @@ class BaseTrainer(object):
         self.incremental_batching = args.incremental_batching
         self.sliding_batching = args.sliding_batching
         self.stop_full_edit = args.stop_full_edit
+        self.half_half = args.half_half
 
 
     def train_loop(self,
@@ -278,7 +279,7 @@ class BaseTrainer(object):
                 #pdb.set_trace()
                 right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).type(torch.LongTensor).to(dvc)
 
-            half_half = True
+            half_half = self.half_half
             if half_half:
                 train_pred_set = train_y_pred.eq(train_y_true).nonzero().to(dvc)
                 train_mixup_training_samples_idx = torch.cat((
