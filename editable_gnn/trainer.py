@@ -571,6 +571,7 @@ class BaseTrainer(object):
         highest_dd = []
         lowest_dd = []
         test_dd_std = 0
+        table_result = []
         #pdb.set_trace()
         for n_hop in range(1, N_HOP + 1):
             bef_edit_hop_acc[n_hop] = []
@@ -595,6 +596,12 @@ class BaseTrainer(object):
 
             success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
             success_list = np.round(np.array(succeses), decimals = 3).tolist()
+            table_result = {
+                '1': (test_drawdown[1], success_list[1]),
+                '10': (test_drawdown[10], success_list[10]),
+                '25': (test_drawdown[25], success_list[25]),
+                '50': (test_drawdown[50], success_list[50])
+            }
             hop_drawdown = {}
         elif eval_setting == 'independent' :
             results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP, manner=manner)
@@ -631,6 +638,12 @@ class BaseTrainer(object):
             test_dd_std = np.std(test_drawdown)
             highest_dd = max(enumerate(test_drawdown), key=lambda x: x[1])
             lowest_dd = min(enumerate(test_drawdown), key=lambda x: x[1])
+            table_result = {
+                '1': (test_drawdown[1], success_list[1]),
+                '10': (test_drawdown[10], success_list[10]),
+                '25': (test_drawdown[25], success_list[25]),
+                '50': (test_drawdown[50], success_list[50])
+            }
             if len(test_acc) > 100:
                  idx = [i*100 for i in range(len(test_acc) // 100)]
                  dd = []
@@ -653,6 +666,7 @@ class BaseTrainer(object):
                     test_dd_std=test_dd_std,
                     highest_dd = highest_dd,
                     lowest_dd = lowest_dd,
+                    table_result = table_result,
                     mean_complexity=np.mean(steps),
                     hop_drawdown=hop_drawdown,
                     tra_std=tra_std,
