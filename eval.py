@@ -213,7 +213,7 @@ if __name__ == '__main__':
         if args.sliding_batching > 0:
             json_name += "_sling_batching_"
         if args.half_half:
-            json_name += "_halfhalf_"
+            json_name += f"_halfhalf_{args.half_half_ratio_mixup}_"
         if args.full_edit:
             json_name += f"_{args.full_edit}_full_edit_"
         if args.pure_egnn:
