@@ -533,7 +533,7 @@ class BaseTrainer(object):
                                                                     max_num_step,
                                                                     manner = manner,
                                                                     mixup_training_samples_idx = torch.Tensor([]),
-                                                                    time_to_full_edit = (idx > 0 and (idx + 1) % self.full_edit == 0),
+                                                                    time_to_full_edit = (idx > 0 and self.full_edit > 0 and (idx + 1) % self.full_edit == 0),
                                                                     num_edit_targets=num_edit_targets,
                                                                     curr_edit_target=idx)
             else:
