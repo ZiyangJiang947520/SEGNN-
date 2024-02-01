@@ -314,7 +314,7 @@ class BaseTrainer(object):
             # batch setting
             else:
                 if self.stop_edit_only:
-                    success = int(y_pred[:num_edit_targets - 1].eq(label)[:num_edit_targets - 1].sum()) / num_edit_targets
+                    success = int(y_pred[:num_edit_targets].eq(label[:num_edit_targets])[:num_edit_targets].sum()) / num_edit_targets
                 else:
                     success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
@@ -416,7 +416,7 @@ class BaseTrainer(object):
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([]), time_to_full_edit = False):
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([]), time_to_full_edit = False,num_edit_targets=1):
         bef_edit_success = self.bef_edit_check(model, idx, f_label)
         if bef_edit_success == 1.:
             return model, bef_edit_success, 0, 0
@@ -429,7 +429,7 @@ class BaseTrainer(object):
             self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx.squeeze(dim=1), random_sampling=random_sampling)
 
         if manner == 'GD':
-            return self.single_edit(model, idx, f_label, optimizer, max_num_step, time_to_full_edit = time_to_full_edit)
+            return self.single_edit(model, idx, f_label, optimizer, max_num_step, time_to_full_edit = time_to_full_edit,num_edit_targets=num_edit_targets)
         elif manner == 'GD_Diff':
             return self.single_Diff_edit(model, idx, f_label, optimizer, max_num_step)
         elif manner == 'Ada_GD_Diff':
@@ -506,7 +506,7 @@ class BaseTrainer(object):
                                                                                         num_samples = self.num_mixup_training_samples)
             if mixup_training_samples_idx is not None:
                 nodes = torch.Tensor([])
-                labels = torch.Tensors([])
+                labels = torch.Tensor([])
                 if self.incremental_batching:
                     nodes = torch.cat((node_idx_2flip[:idx+1].squeeze(dim=1), mixup_training_samples_idx.squeeze(dim=1)), dim=0)
                     labels = torch.cat((flipped_label[:idx+1].squeeze(dim=1), mixup_label.squeeze(dim=1)), dim=0)
@@ -779,7 +779,8 @@ class WholeGraphTrainer(BaseTrainer):
             # batch setting
             else:
                 if self.stop_edit_only:
-                    success = int(y_pred[:num_edit_targets - 1].eq(label)[:num_edit_targets - 1].sum()) / num_edit_targets
+                    #pdb.set_trace()
+                    success = int(y_pred[:num_edit_targets].eq(label[:num_edit_targets])[:num_edit_targets].sum()) / num_edit_targets
                 else:
                     success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:

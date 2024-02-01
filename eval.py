@@ -201,7 +201,7 @@ if __name__ == '__main__':
             json_name += "_incremental_batching_"
         if args.sliding_batching > 0:
             json_name += "_sling_batching_"
-        json_name += + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
+        json_name += f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
     elif args.manner == 'Ada_GD_Diff':
