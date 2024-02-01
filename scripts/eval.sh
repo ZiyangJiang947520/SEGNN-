@@ -35,6 +35,7 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --num_mixup_training_samples 100 \
         --finetune_between_edit False \
         --stop_edit_only True \
+        --stop_full_edit False \
         --iters_before_stop 0 \
         --full_edit False \
         --mixup_k_nearest_neighbors True \

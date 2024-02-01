@@ -38,6 +38,8 @@ parser.add_argument('--finetune_between_edit', type=str2bool, default=False,
                         help="whether to finetune the MLP between editing")
 parser.add_argument('--stop_edit_only', type=str2bool, default=False,
                         help="whether to stop when the edit target is correct")
+parser.add_argument('--stop_full_edit', type=str2bool, default=False,
+                        help="whether to stop when all of the edit targets are correct")
 parser.add_argument('--iters_before_stop', type=int, default=0,
                         help="more iterations to run before full stopping")
 parser.add_argument('--full_edit', type=str2bool, default=False,
@@ -191,6 +193,8 @@ if __name__ == '__main__':
         json_name = root_json
         if args.stop_edit_only:
             json_name += "_stop_edit_only_"
+        if args.stop_full_edit:
+            json_name += "_stop_full_edit_"
         if args.num_mixup_training_samples > 0:
             json_name += f"_{args.num_mixup_training_samples}_mixup_"
         if args.full_edit:

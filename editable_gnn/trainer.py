@@ -64,6 +64,7 @@ class BaseTrainer(object):
         self.mixup_k_nearest_neighbors = args.mixup_k_nearest_neighbors
         self.incremental_batching = args.incremental_batching
         self.sliding_batching = args.sliding_batching
+        self.stop_full_edit = args.stop_full_edit
 
 
     def train_loop(self,
@@ -530,6 +531,8 @@ class BaseTrainer(object):
                                                                     num_edit_targets=num_edit_targets)
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
+            #get success
+            success = self.success_rate(model, node_idx_2flip[:idx+1].squeeze(dim=1), flipped_label[:idx+1].squeeze(dim=1))
             res = [*self.test(edited_model, whole_data), success, steps]
             results_temporary.append(res)
         return results_temporary
@@ -594,6 +597,7 @@ class BaseTrainer(object):
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
             test_drawdown = test_drawdown = np.round((np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals = 3).tolist()
+            test_dd_std = np.std(test_drawdown)
             tra_std = None
             val_std = None
             test_std = None
@@ -623,6 +627,7 @@ class BaseTrainer(object):
                     test_drawdown=test_drawdown,
                     success_rate=success_rate,
                     average_dd = average_dd,
+                    test_dd_std=test_dd_std,
                     highest_dd = highest_dd,
                     lowest_dd = lowest_dd,
                     mean_complexity=np.mean(steps),
@@ -704,7 +709,9 @@ class BaseTrainer(object):
 
     def between_edit_finetune_mlp(self, batch_size, iters, idx, random_sampling=False):
         pass
-
+    
+    def success_rate(self, model, idx, label):
+        pass
 
 class WholeGraphTrainer(BaseTrainer):
     def __init__(self,
@@ -740,6 +747,22 @@ class WholeGraphTrainer(BaseTrainer):
             xs.append(getattr(data, f'x{i}'))
             i += 1
         return {"x": data.x, 'adj_t': data.adj_t}
+
+    def success_rate(self, model, idx, label):
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize()
+        model.eval()
+        input = self.grab_input(self.whole_data)
+        if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+            out = model.fast_forward(input['x'][idx], idx)
+            y_pred = out.argmax(dim=-1)
+        else:
+            out = model(**input)
+            y_pred = out.argmax(dim=-1)[idx]
+        success = int(y_pred.eq(label).sum()) / label.size(0)
+        torch.cuda.synchronize()
+        return success
 
 
     def single_edit(self, model, idx, label, optimizer, max_num_step, time_to_full_edit=False,num_edit_targets=1):
@@ -778,9 +801,11 @@ class WholeGraphTrainer(BaseTrainer):
                     success = False
             # batch setting
             else:
-                if self.stop_edit_only:
+                if self.stop_full_edit:
                     #pdb.set_trace()
                     success = int(y_pred[:num_edit_targets].eq(label[:num_edit_targets])[:num_edit_targets].sum()) / num_edit_targets
+                elif self.stop_edit_only:
+                    success = 1.0 if y_pred[num_edit_targets - 1] == label[num_edit_targets - 1] else 0
                 else:
                     success = int(y_pred.eq(label).sum()) / label.size(0)
                 if success == 1.:
