@@ -420,7 +420,7 @@ class BaseTrainer(object):
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', 
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD',
                     mixup_training_samples_idx = torch.Tensor([]), time_to_full_edit = False,
                     num_edit_targets=1, curr_edit_target=0, pure_egnn_edit=False):
         bef_edit_success = self.bef_edit_check(model, idx, f_label,curr_edit_target=curr_edit_target)
@@ -435,8 +435,8 @@ class BaseTrainer(object):
             self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx.squeeze(dim=1), random_sampling=random_sampling)
 
         if manner == 'GD':
-            return self.single_edit(model, idx, f_label, optimizer, max_num_step, 
-                                    time_to_full_edit = time_to_full_edit, num_edit_targets=num_edit_targets, 
+            return self.single_edit(model, idx, f_label, optimizer, max_num_step,
+                                    time_to_full_edit = time_to_full_edit, num_edit_targets=num_edit_targets,
                                     pure_egnn_edit=pure_egnn_edit)
         elif manner == 'GD_Diff':
             return self.single_Diff_edit(model, idx, f_label, optimizer, max_num_step)
@@ -540,7 +540,7 @@ class BaseTrainer(object):
                                                                     time_to_full_edit = (idx > 0 and self.full_edit > 0 and (idx + 1) % self.full_edit == 0),
                                                                     num_edit_targets=num_edit_targets,
                                                                     curr_edit_target=idx,
-                                                                    pure_egnn_edit=(self.num_pure_edit > idx))
+                                                                    pure_egnn_edit=(self.pure_egnn > idx))
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             #get success
@@ -804,20 +804,25 @@ class WholeGraphTrainer(BaseTrainer):
                     out = model(**input)[idx]
                     model.mlp_freezed = False
                     out += model.MLP(input['x'][idx])
+                    loss = self.loss_op(out, label)
+                    y_pred = out.argmax(dim=-1)
                 elif pure_egnn_edit:
                     self.model.freeze_module(train=True)
                     out = model(**input)
+                    loss = self.loss_op(out[idx], label)
+                    y_pred = out.argmax(dim=-1)[idx]
                 else:
                     out = model.fast_forward(input['x'][idx], idx)
-                loss = self.loss_op(out, label)
-                y_pred = out.argmax(dim=-1)
+                    loss = self.loss_op(out, label)
+                    y_pred = out.argmax(dim=-1)
             else:
                 out = model(**input)
                 loss = self.loss_op(out[idx], label)
                 y_pred = out.argmax(dim=-1)[idx]
             loss.backward()
             optimizer.step()
-            model.freeze_module(train=False)
+            if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+                model.freeze_module(train=False)
             # sequential or independent setting
             if label.shape[0] == 1:
                 if y_pred == label:
