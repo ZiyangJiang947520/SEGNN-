@@ -23,7 +23,29 @@ parser.add_argument('--attack_class', type=int, default=0,
                     help='the class of nodes to be attacked')
 parser.add_argument('--attack_ratio', type=float, default=0.1,
                     help='the ratio of attacked nodes')
-
+parser.add_argument('--finetune_between_edit', type=str2bool, default=False,
+                        help="whether to finetune the MLP between editing")
+parser.add_argument('--stop_edit_only', type=str2bool, default=False,
+                        help="whether to stop when the edit target is correct")
+parser.add_argument('--stop_full_edit', type=str2bool, default=False,
+                        help="whether to stop when all of the edit targets are correct")
+parser.add_argument('--iters_before_stop', type=int, default=0,
+                        help="more iterations to run before full stopping")
+parser.add_argument('--full_edit', type=int, default=0,
+                        help="whether to edit both the gnn and mlp")
+parser.add_argument('--pure_egnn', type=int, default=0,
+                        help="whether to use pure egnn in the first iterations")
+parser.add_argument('--mixup_k_nearest_neighbors', type=str2bool, default=False,
+                        help="whether to sample k nearest neighbors for training mixup")
+parser.add_argument('--incremental_batching', type=str2bool, default=False,
+                        help="whether to do incremental batching edit")
+parser.add_argument('--half_half', type=str2bool, default=False,
+                        help="half and half mixup")
+parser.add_argument('--half_half_ratio_mixup', type=float, default=0.5,
+                        help="ratio for half and half mixup. This ratio is used as ratio of NN samples in the mixup.")
+parser.add_argument('--sliding_batching', type=int, default=0,
+                        help="whether to do sliding batching edit")
+parser.add_argument('--num_mixup_training_samples', default=0, type=int)
 
 if __name__ == '__main__':
     args = parser.parse_args()
