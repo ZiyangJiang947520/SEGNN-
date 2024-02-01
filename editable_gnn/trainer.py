@@ -67,6 +67,7 @@ class BaseTrainer(object):
         self.stop_full_edit = args.stop_full_edit
         self.half_half = args.half_half
         self.pure_egnn = args.pure_egnn
+        self.half_half_ratio_mixup = args.half_half_ratio_mixup
 
 
     def train_loop(self,
@@ -284,8 +285,8 @@ class BaseTrainer(object):
             if half_half:
                 train_pred_set = train_y_pred.eq(train_y_true).nonzero().to(dvc)
                 train_mixup_training_samples_idx = torch.cat((
-                                                            right_pred_set[torch.randperm(len(right_pred_set))[:num_samples // 2]].type(torch.LongTensor).to(dvc),
-                                                            train_pred_set[torch.randperm(len(train_pred_set))[num_samples // 2:num_samples]]), dim=0)
+                                                            right_pred_set[torch.randperm(len(right_pred_set))[:int(num_samples * self.half_half_ratio_mixup)]].type(torch.LongTensor).to(dvc),
+                                                            train_pred_set[torch.randperm(len(train_pred_set))[int(num_samples * self.half_half_ratio_mixup):num_samples]]), dim=0)
             else:
                 train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]].type(torch.LongTensor)
             #pdb.set_trace()

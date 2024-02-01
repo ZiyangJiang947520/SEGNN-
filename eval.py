@@ -52,6 +52,8 @@ parser.add_argument('--incremental_batching', type=str2bool, default=False,
                         help="whether to do incremental batching edit")
 parser.add_argument('--half_half', type=str2bool, default=False,
                         help="half and half mixup")
+parser.add_argument('--half_half_ratio_mixup', type=float, default=0.5,
+                        help="ratio for half and half mixup. This ratio is used as ratio of NN samples in the mixup.")
 parser.add_argument('--sliding_batching', type=int, default=0,
                         help="whether to do sliding batching edit")
 
@@ -127,7 +129,7 @@ if __name__ == '__main__':
                                                         num_samples=args.num_samples,
                                                         criterion=args.criterion,
                                                         from_valid_set=True)
-                                                        
+
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
         MAX_NUM_EDIT_STEPS = 500

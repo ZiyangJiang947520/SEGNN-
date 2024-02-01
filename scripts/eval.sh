@@ -37,6 +37,7 @@ for model in  gcn sage gcn_mlp sage_mlp; do ###gcn sage mlp gcn_mlp sage_mlp
         --stop_edit_only False \
         --stop_full_edit False \
         --half_half False \
+        --half_half_ratio_mixup 0.25 \
         --iters_before_stop 0 \
         --full_edit False \
         --mixup_k_nearest_neighbors False \
