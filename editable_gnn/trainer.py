@@ -396,7 +396,7 @@ class BaseTrainer(object):
 
         return model, success, loss, step
 
-    def bef_edit_check(self,  model, idx, label):
+    def bef_edit_check(self,  model, idx, label, curr_edit_target):
         model.eval()
         torch.cuda.synchronize()
         input = self.grab_input(self.whole_data)
@@ -415,12 +415,12 @@ class BaseTrainer(object):
                 success = False
         # batch setting
         else:
-            success = int(y_pred.eq(label).sum()) / label.size(0)
+            success = 1.0 if y_pred.eq(label)[curr_edit_target] else 0.0
         torch.cuda.synchronize()
         return success
 
-    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([]), time_to_full_edit = False,num_edit_targets=1):
-        bef_edit_success = self.bef_edit_check(model, idx, f_label)
+    def edit_select(self, model, idx, f_label, optimizer, max_num_step, manner='GD', mixup_training_samples_idx = torch.Tensor([]), time_to_full_edit = False,num_edit_targets=1, curr_edit_target=0):
+        bef_edit_success = self.bef_edit_check(model, idx, f_label,curr_edit_target=curr_edit_target)
         if bef_edit_success == 1.:
             return model, bef_edit_success, 0, 0
 
@@ -533,7 +533,8 @@ class BaseTrainer(object):
                                                                     manner = manner,
                                                                     mixup_training_samples_idx = torch.Tensor([]),
                                                                     time_to_full_edit = (idx > 0 and (idx + 1) % self.full_edit == 0),
-                                                                    num_edit_targets=num_edit_targets)
+                                                                    num_edit_targets=num_edit_targets,
+                                                                    curr_edit_target=idx)
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
             #get success

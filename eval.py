@@ -122,6 +122,12 @@ if __name__ == '__main__':
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
 
     bef_edit_ft_results = {}
+    node_idx_2flip, flipped_label = trainer.select_node(whole_data=whole_data,
+                                                        num_classes=num_classes,
+                                                        num_samples=args.num_samples,
+                                                        criterion=args.criterion,
+                                                        from_valid_set=True)
+                                                        
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
         MAX_NUM_EDIT_STEPS = 500
@@ -138,11 +144,6 @@ if __name__ == '__main__':
 
     assert args.criterion in ['wrong2correct', 'random'], 'currently only support selecting nodes with mode ' \
                                                           '``wrong2correct`` or ``random``'
-    node_idx_2flip, flipped_label = trainer.select_node(whole_data=whole_data,
-                                                        num_classes=num_classes,
-                                                        num_samples=args.num_samples,
-                                                        criterion=args.criterion,
-                                                        from_valid_set=True)
 
     mixup_training_samples_idx, mixup_label = trainer.select_mixup_training_nodes(whole_data=whole_data,
                                                                                   criterion=args.criterion,
