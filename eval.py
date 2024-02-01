@@ -42,8 +42,10 @@ parser.add_argument('--stop_full_edit', type=str2bool, default=False,
                         help="whether to stop when all of the edit targets are correct")
 parser.add_argument('--iters_before_stop', type=int, default=0,
                         help="more iterations to run before full stopping")
-parser.add_argument('--full_edit', type=str2bool, default=False,
+parser.add_argument('--full_edit', type=int, default=0,
                         help="whether to edit both the gnn and mlp")
+parser.add_argument('--pure_egnn', type=int, default=0,
+                        help="whether to use pure egnn in the first iterations")
 parser.add_argument('--mixup_k_nearest_neighbors', type=str2bool, default=False,
                         help="whether to sample k nearest neighbors for training mixup")
 parser.add_argument('--incremental_batching', type=str2bool, default=False,
@@ -209,6 +211,10 @@ if __name__ == '__main__':
             json_name += "_sling_batching_"
         if args.half_half:
             json_name += "_halfhalf_"
+        if args.full_edit:
+            json_name += f"_{args.full_edit}_full_edit_"
+        if args.pure_egnn:
+            json_name += f"_{args.pure_egnn}_pure_egnn_"
         json_name += f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'

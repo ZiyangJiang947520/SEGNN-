@@ -66,6 +66,7 @@ class BaseTrainer(object):
         self.sliding_batching = args.sliding_batching
         self.stop_full_edit = args.stop_full_edit
         self.half_half = args.half_half
+        self.pure_egnn = args.pure_egnn
 
 
     def train_loop(self,
@@ -531,7 +532,7 @@ class BaseTrainer(object):
                                                                     max_num_step,
                                                                     manner = manner,
                                                                     mixup_training_samples_idx = torch.Tensor([]),
-                                                                    time_to_full_edit = (idx > 0 and idx % 10 == 0),
+                                                                    time_to_full_edit = (idx > 0 and (idx + 1) % self.full_edit == 0),
                                                                     num_edit_targets=num_edit_targets)
             else:
                 edited_model, success, loss, steps = self.edit_select(model, node_idx_2flip[:idx + 1].squeeze(dim=1), flipped_label[:idx + 1].squeeze(dim=1), optimizer, max_num_step, manner)
