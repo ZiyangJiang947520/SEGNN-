@@ -448,9 +448,12 @@ class BaseTrainer(object):
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
         results_temporary = []
+        i = 0
         for idx, f_label in tqdm(zip(node_idx_2flip, flipped_label)):
+            i = i + 1
             # edited_model, success, loss, steps = self.single_edit(model, idx, f_label, optimizer, max_num_step)
             edited_model, success, loss, steps = self.edit_select(model, idx, f_label, optimizer, max_num_step, manner)
+            success = self.success_rate(model, node_idx_2flip[:i].squeeze(dim=1), flipped_label[:i].squeeze(dim=1))
             if specific_class is None:
                 res = [*self.test(edited_model, whole_data), success, steps]
             else:
@@ -554,10 +557,12 @@ class BaseTrainer(object):
         bef_edit_hop_acc = {}
         N_HOP = 3
         success_rate = 0
+        success_list = []
         hop_drawdown = {}
         average_dd = []
         highest_dd = []
         lowest_dd = []
+        test_dd_std = 0
         #pdb.set_trace()
         for n_hop in range(1, N_HOP + 1):
             bef_edit_hop_acc[n_hop] = []
@@ -570,12 +575,18 @@ class BaseTrainer(object):
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
             test_drawdown = test_drawdown = np.round((np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals = 3).tolist()
+            average_dd = np.round(np.mean(np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals=3) * 100
+            test_drawdown = [test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown]
+            test_dd_std = np.std(test_drawdown)
+            highest_dd = max(enumerate(test_drawdown), key=lambda x: x[1])
+            lowest_dd = min(enumerate(test_drawdown), key=lambda x: x[1])
             tra_std = None
             val_std = None
             test_std = None
             #ipdb.set_trace()
 
-            success_rate = succeses[-1]
+            success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
+            success_list = np.round(np.array(succeses), decimals = 3).tolist()
             hop_drawdown = {}
         elif eval_setting == 'independent' :
             results_temporary = self.independent_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP, manner=manner)
@@ -604,10 +615,12 @@ class BaseTrainer(object):
             test_std = None
             #ipdb.set_trace()
 
-            success_rate = np.mean(succeses)
+            success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
+            success_list = np.round(np.array(succeses), decimals = 3).tolist()
             hop_drawdown = {}
             average_dd = np.round(np.mean(np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals=3) * 100
             test_drawdown = [test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown]
+            test_dd_std = np.std(test_drawdown)
             highest_dd = max(enumerate(test_drawdown), key=lambda x: x[1])
             lowest_dd = min(enumerate(test_drawdown), key=lambda x: x[1])
             if len(test_acc) > 100:
@@ -627,6 +640,7 @@ class BaseTrainer(object):
                     val_drawdown=val_drawdown * 100,
                     test_drawdown=test_drawdown,
                     success_rate=success_rate,
+                    success_list = success_list,
                     average_dd = average_dd,
                     test_dd_std=test_dd_std,
                     highest_dd = highest_dd,
@@ -763,6 +777,7 @@ class WholeGraphTrainer(BaseTrainer):
             y_pred = out.argmax(dim=-1)[idx]
         success = int(y_pred.eq(label).sum()) / label.size(0)
         torch.cuda.synchronize()
+        print(f'I am here {idx}')
         return success
 
 
