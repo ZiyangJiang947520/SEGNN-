@@ -7,7 +7,7 @@ params:
   reddit:
     arch_name: GCN2
     architecture:
-      num_layers: 4
+      num_layers: 2
       hidden_channels: 256
       dropout: 0.5
       batch_norm: false
@@ -21,8 +21,8 @@ params:
   arxiv:
     arch_name: GCN2
     architecture:
-      num_layers: 4
-      hidden_channels: 256
+      num_layers: 3
+      hidden_channels: 128
       dropout: 0.5
       batch_norm: false
       residual: false
@@ -35,7 +35,7 @@ params:
   products:
     arch_name: GCN2
     architecture:
-      num_layers: 4
+      num_layers: 3
       hidden_channels: 256
       dropout: 0.5
       batch_norm: false
@@ -45,28 +45,14 @@ params:
     optim: adam
     lr: 0.002
     epochs: 500
-  
-  reddit:
-    arch_name: GCN2
-    architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
-      batch_norm: false
-      residual: false
-      alpha: 0.1
-      theta: 0.5
-    optim: adam
-    lr: 0.01
-    epochs: 400
 
   
   flickr:
     arch_name: GCN2
     architecture:
-      num_layers: 4
+      num_layers: 2
       hidden_channels: 256
-      dropout: 0.5
+      dropout: 0.3
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -92,9 +78,9 @@ params:
   cora:
     arch_name: GCN2
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -134,9 +120,9 @@ params:
   amazoncomputers:
     arch_name: GCN2
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -149,8 +135,8 @@ params:
     arch_name: GCN2
     architecture:
       num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -162,9 +148,9 @@ params:
   coauthorcs:
     arch_name: GCN2
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1

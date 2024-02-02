@@ -7,16 +7,15 @@ from torch.nn import ModuleList, BatchNorm1d, Linear
 from torch_sparse import SparseTensor
 from torch_geometric.nn import GCN2Conv
 from .base import BaseGNNModel
-
-
+from .mlp import MLP
 
 class GCN2(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
-                 out_channels: int, num_layers: int, alpha: float, theta: float = None, dropout: float = 0.0, 
+                 out_channels: int, num_layers: int, alpha: float, theta: float = None, dropout: float = 0.0,
                  shared_weights: bool = False, batch_norm: bool = False, residual: bool = False, use_linear=False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
-        super(GCN2, self).__init__(in_channels, hidden_channels, out_channels, 
+        super(GCN2, self).__init__(in_channels, hidden_channels, out_channels,
                                     num_layers, dropout, batch_norm, residual, use_linear)
         self.alpha, self.theta = alpha, theta
 
@@ -84,7 +83,7 @@ class GCN2(BaseGNNModel):
         x = self.activation(h)
         if layer == self.num_layers - 1:
             x = self.dropout(x)
-            x = self.lins[1](x)  
+            x = self.lins[1](x)
         return h
 
 class GCN2_MLP(BaseGNNModel):
@@ -94,21 +93,21 @@ class GCN2_MLP(BaseGNNModel):
                  batch_norm: bool = False, residual: bool = False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
-        super(GCN2_MLP, self).__init__(in_channels, hidden_channels, out_channels, 
+        super(GCN2_MLP, self).__init__(in_channels, hidden_channels, out_channels,
                                   num_layers, dropout, batch_norm, residual)
         self.alpha, self.theta = alpha, theta
 
         if load_pretrained_backbone:
             self.GCN2 = GCN2.from_pretrained(
-                                in_channels=in_channels, 
+                                in_channels=in_channels,
                                 hidden_channels=hidden_channels,
                                 out_channels=out_channels,
                                 saved_ckpt_path=saved_ckpt_path,
                                 num_layers=num_layers,
                                 alpha=alpha,
                                 theta=theta,
-                                dropout=dropout, 
-                                batch_norm=batch_norm, 
+                                dropout=dropout,
+                                batch_norm=batch_norm,
                                 residual=residual)
         else:
             self.GCN2 = GCN2(in_channels=in_channels, hidden_channels=hidden_channels, out_channels=out_channels,alpha=alpha, theta=theta,
@@ -116,7 +115,7 @@ class GCN2_MLP(BaseGNNModel):
         self.MLP = MLP(in_channels=in_channels, hidden_channels=hidden_channels,
                         out_channels=out_channels, num_layers=num_layers, dropout=dropout,
                         batch_norm=batch_norm, residual=residual)
-        
+
         self.mlp_freezed = True
         if load_pretrained_backbone:
             self.freeze_layer(self.GCN2, freeze=True)
@@ -136,18 +135,18 @@ class GCN2_MLP(BaseGNNModel):
                 bn.reset_parameters()
         for lin in self.GCN2.lins:
             lin.reset_parameters()
-        
+
         ### reset MLP parameters
         for lin in self.MLP.lins:
             lin.reset_parameters()
         if self.MLP.batch_norm:
             for bn in self.MLP.bns:
                 bn.reset_parameters()
-    
+
     def freeze_layer(self, model, freeze=True):
         for name, p in model.named_parameters():
             p.requires_grad = not freeze
-            
+
     def freeze_module(self, train=True):
         ### train indicates whether train/eval editable ability
         if train:
@@ -160,10 +159,10 @@ class GCN2_MLP(BaseGNNModel):
             self.mlp_freezed = False
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args, **kwargs) -> Tensor:
-        GCN2_out = self.SAGE(x, adj_t, *args)
+        GCN2_out = self.GCN2(x, adj_t, *args)
         if self.mlp_freezed:
             x = GCN2_out
-        else:   
+        else:
             MLP_out = self.MLP(x, *args)
             x = GCN2_out + MLP_out
         return x

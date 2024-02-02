@@ -4,25 +4,12 @@ norm: true
 load_pretrained_backbone: true
 
 params:
-  reddit:
-    arch_name: GCN2_MLP
-    architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
-      batch_norm: false
-      residual: false
-      alpha: 0.1
-      theta: 0.5
-    optim: adam
-    lr: 0.01
-    epochs: 400
 
   arxiv:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
-      hidden_channels: 256
+      num_layers: 3
+      hidden_channels: 128
       dropout: 0.5
       batch_norm: false
       residual: false
@@ -35,7 +22,7 @@ params:
   products:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
+      num_layers: 3
       hidden_channels: 256
       dropout: 0.5
       batch_norm: false
@@ -49,7 +36,7 @@ params:
   reddit:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
+      num_layers: 2
       hidden_channels: 256
       dropout: 0.5
       batch_norm: false
@@ -64,9 +51,9 @@ params:
   flickr:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
+      num_layers: 2
       hidden_channels: 256
-      dropout: 0.5
+      dropout: 0.3
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -92,9 +79,9 @@ params:
   cora:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -134,9 +121,9 @@ params:
   amazoncomputers:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -148,9 +135,9 @@ params:
   amazonphoto:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1
@@ -162,9 +149,9 @@ params:
   coauthorcs:
     arch_name: GCN2_MLP
     architecture:
-      num_layers: 4
-      hidden_channels: 256
-      dropout: 0.5
+      num_layers: 2
+      hidden_channels: 32
+      dropout: 0.1
       batch_norm: false
       residual: false
       alpha: 0.1

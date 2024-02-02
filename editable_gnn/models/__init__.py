@@ -1,6 +1,6 @@
 from .gcn import GCN
 from .sage import SAGE
-from .gcn2 import GCN2
+from .gcn2 import GCN2, GCN2_MLP
 from .mlp import MLP
 from.sgc import SGC, SGC_MLP
 from .sign import SIGN, SIGN_MLP
@@ -19,5 +19,6 @@ __all__ = [
     'SGC',
     'SIGN',
     'SGC_MLP',
-    'SIGN_MLP'
+    'SIGN_MLP',
+    'GCN2_MLP'
 ]
