@@ -118,8 +118,16 @@ if __name__ == '__main__':
                           amp_mode=False)
 
 
+    if "enn_ft" not in args.saved_model_path:
+        bef_edit_results = trainer.test(model, whole_data)
+    else:
+        pre_enn_model = MODEL_FAMILY.from_pretrained(in_channels=num_features,
+                                out_channels=num_classes,
+                                saved_ckpt_path=args.saved_model_path.replace('/enn_ft', ''),
+                                **model_config['architecture'])
+        pre_enn_model.cuda()
+        bef_edit_results = trainer.test(pre_enn_model, whole_data)
 
-    bef_edit_results = trainer.test(model, whole_data)
     train_acc, valid_acc, test_acc = bef_edit_results
     print(f'before edit, train acc {train_acc}, valid acc {valid_acc}, test acc {test_acc}')
 

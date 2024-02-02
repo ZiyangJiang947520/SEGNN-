@@ -1,5 +1,5 @@
-save_dir_root=./ckpts/enn_ft
-output_dir=./finetune_new_std/enn_ft
+save_dir_root=./ckpts
+output_dir=./finetune_new_std
 criterion=wrong2correct
 
 
