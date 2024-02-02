@@ -748,7 +748,18 @@ class BaseTrainer(object):
         pass
 
     def success_rate(self, model, idx, label):
-        pass
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.synchronize()
+        model.eval()
+        input = self.grab_input(self.whole_data)
+        input['x'] = input['x'][idx]
+        out = model(**input)
+        y_pred = out.argmax(dim=-1)
+        success = int(y_pred.eq(label).sum()) / label.size(0)
+        torch.cuda.synchronize()
+        print(f'I am here {idx}')
+        return success
 
 class WholeGraphTrainer(BaseTrainer):
     def __init__(self,
