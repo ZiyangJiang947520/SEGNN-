@@ -13,7 +13,7 @@ from .base import BaseGNNModel
 class GCN2(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
                  out_channels: int, num_layers: int, alpha: float, theta: float = None, dropout: float = 0.0, 
-                 batch_norm: bool = False, residual: bool = False, use_linear=False,
+                 shared_weights: bool = False, batch_norm: bool = False, residual: bool = False, use_linear=False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
         super(GCN2, self).__init__(in_channels, hidden_channels, out_channels, 
@@ -90,7 +90,7 @@ class GCN2(BaseGNNModel):
 class GCN2_MLP(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
                  out_channels: int, num_layers: int, alpha: float, theta: float = None,
-                 shared_weights: bool = True, dropout: float = 0.0,
+                 shared_weights: bool = False, dropout: float = 0.0,
                  batch_norm: bool = False, residual: bool = False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):

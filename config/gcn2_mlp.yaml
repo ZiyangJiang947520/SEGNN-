@@ -1,6 +1,7 @@
 name: GCN2
 loop: true
 norm: true
+load_pretrained_backbone: true
 
 params:
   reddit:
