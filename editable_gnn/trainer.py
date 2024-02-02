@@ -572,6 +572,7 @@ class BaseTrainer(object):
         lowest_dd = []
         test_dd_std = 0
         table_result = []
+        start_time = time.time()
         #pdb.set_trace()
         for n_hop in range(1, N_HOP + 1):
             bef_edit_hop_acc[n_hop] = []
@@ -654,6 +655,7 @@ class BaseTrainer(object):
                  average_dd = list(zip(dd, sc))
         else:
             raise NotImplementedError
+        total_time = time.time() - start_time
         return dict(bef_edit_tra_acc=bef_edit_tra_acc,
                     bef_edit_val_acc=bef_edit_val_acc,
                     bef_edit_tst_acc=bef_edit_tst_acc,
@@ -666,6 +668,7 @@ class BaseTrainer(object):
                     test_dd_std=test_dd_std,
                     highest_dd = highest_dd,
                     lowest_dd = lowest_dd,
+                    total_time = total_time,
                     table_result = table_result,
                     mean_complexity=np.mean(steps),
                     hop_drawdown=hop_drawdown,
