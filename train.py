@@ -5,7 +5,7 @@ import yaml
 import editable_gnn.models as models
 from data import get_data, prepare_dataset
 from editable_gnn import WholeGraphTrainer, BaseTrainer, set_seeds_all
-
+from editable_gnn.utils import str2bool
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, required=True,
