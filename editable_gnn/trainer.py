@@ -401,7 +401,7 @@ class BaseTrainer(object):
         model.eval()
         torch.cuda.synchronize()
         input = self.grab_input(self.whole_data)
-        if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+        if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP', 'GCN2_MLP', 'GAT_MLP', 'JKNET_MLP', 'GIN_MLP']:
             out = model.fast_forward(input['x'][idx], idx)
             y_pred = out.argmax(dim=-1)
         else:
@@ -430,7 +430,7 @@ class BaseTrainer(object):
         assert manner in ['GD', 'GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus']
 
         random_sampling = False
-        if self.between_edit_ftn and model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP'] and (random_sampling or mixup_training_samples_idx.size(0) > 0):
+        if self.between_edit_ftn and model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP', 'GCN2_MLP', 'GAT_MLP', 'JKNET_MLP', 'GIN_MLP'] and (random_sampling or mixup_training_samples_idx.size(0) > 0):
             #pdb.set_trace()
             self.between_edit_finetune_mlp(batch_size=50, iters=100, idx=mixup_training_samples_idx.squeeze(dim=1), random_sampling=random_sampling)
 
@@ -791,7 +791,7 @@ class WholeGraphTrainer(BaseTrainer):
         torch.cuda.synchronize()
         model.eval()
         input = self.grab_input(self.whole_data)
-        if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+        if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP', 'GCN2_MLP', 'GAT_MLP', 'JKNET_MLP', 'GIN_MLP']:
             out = model.fast_forward(input['x'][idx], idx)
             y_pred = out.argmax(dim=-1)
         else:
@@ -811,7 +811,7 @@ class WholeGraphTrainer(BaseTrainer):
         for step in range(1, max_num_step + 1):
             optimizer.zero_grad()
             input = self.grab_input(self.whole_data)
-            if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+            if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP', 'GCN2_MLP', 'GAT_MLP', 'JKNET_MLP', 'GIN_MLP']:
                 if self.full_edit and time_to_full_edit:
                     model.freeze_module()
                     model.freeze_layer(model.MLP, freeze=False)
@@ -835,7 +835,7 @@ class WholeGraphTrainer(BaseTrainer):
                 y_pred = out.argmax(dim=-1)[idx]
             loss.backward()
             optimizer.step()
-            if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP']:
+            if model.__class__.__name__ in ['GCN_MLP', 'SAGE_MLP', 'GCN2_MLP', 'GAT_MLP', 'JKNET_MLP', 'GIN_MLP']:
                 model.freeze_module(train=False)
             # sequential or independent setting
             if label.shape[0] == 1:
