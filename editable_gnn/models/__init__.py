@@ -7,12 +7,13 @@ from .sign import SIGN, SIGN_MLP
 
 from .gcn_mlp import GCN_MLP
 from .sage_mlp import SAGE_MLP
-
+from .gat import GAT, GAT_MLP
 
 __all__ = [
     'GCN',
     'SAGE',
     'GCN2',
+    'GAT',
     'MLP',
     'GCN_MLP',
     'SAGE_MLP',
@@ -20,5 +21,6 @@ __all__ = [
     'SIGN',
     'SGC_MLP',
     'SIGN_MLP',
-    'GCN2_MLP'
+    'GCN2_MLP',
+    'GAT_MLP',
 ]
