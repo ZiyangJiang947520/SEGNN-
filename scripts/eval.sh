@@ -1,5 +1,5 @@
-save_dir_root=./ckpts
-output_dir=./finetune_new_std
+save_dir_root=./ckpts/enn_ft
+output_dir=./finetune_new_std/enn_ft
 criterion=wrong2correct
 
 
@@ -20,9 +20,9 @@ criterion=wrong2correct
 ## cora flickr reddit2 arxiv amazoncomputers amazonphoto coauthorcs coauthorphysics yelp products
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in flickr; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for dataset in cora coauthorcs amazoncomputers amazonphoto arxiv; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
-for model in gat_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
+for model in gcn sage gin gat; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi
@@ -36,11 +36,11 @@ for model in gat_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
         --finetune_between_edit False \
         --stop_edit_only False \
         --stop_full_edit True \
-        --half_half True \
+        --half_half False \
         --half_half_ratio_mixup 0.75 \
         --iters_before_stop 0 \
         --full_edit 0 \
-        --mixup_k_nearest_neighbors True \
+        --mixup_k_nearest_neighbors False \
         --incremental_batching True \
         --sliding_batching 0 \
         --pure_egnn 0 \

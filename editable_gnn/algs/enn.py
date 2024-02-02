@@ -55,8 +55,7 @@ class ENN(EditableModel):
                 opt,
                 override={'lr': list(self.edit_lrs)},
                 copy_initial_weights=False,
-                track_higher_grads=self.training,
-                in_place=True
+                track_higher_grads=self.training
         ) as (fmodel, diffopt):
             fmodel.eval()
             for edit_step in range(self.config.n_edit_steps):
