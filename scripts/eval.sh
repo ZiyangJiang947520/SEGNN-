@@ -20,7 +20,7 @@ criterion=wrong2correct
 ## cora flickr reddit2 arxiv amazoncomputers amazonphoto coauthorcs coauthorphysics yelp products
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in cora flickr amazoncomputers amazonphoto products coauthorcs; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for dataset in flickr; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 for model in gat_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
@@ -37,7 +37,7 @@ for model in gat_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
         --stop_edit_only False \
         --stop_full_edit True \
         --half_half True \
-        --half_half_ratio_mixup 0.25 \
+        --half_half_ratio_mixup 0.75 \
         --iters_before_stop 0 \
         --full_edit 0 \
         --mixup_k_nearest_neighbors True \

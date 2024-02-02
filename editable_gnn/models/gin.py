@@ -3,9 +3,9 @@ from tqdm import tqdm
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-from torch.nn import ModuleList, Linear, BatchNorm1d
+from torch.nn import ModuleList, Linear, BatchNorm1d, Sequential, ReLU
 from torch_sparse import SparseTensor
-from torch_geometric.nn import GINConv
+from torch_geometric.nn import GINConv, global_add_pool
 from .base import BaseGNNModel
 
 from .mlp import MLP
@@ -17,7 +17,7 @@ class GIN(BaseGNNModel):
                  batch_norm: bool = False, residual: bool = False, use_linear=False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
-        super(GIN, self).__init__(in_channels, hidden_channels, out_channels, 
+        super(GIN, self).__init__(in_channels, hidden_channels, out_channels,
                                   num_layers, dropout, batch_norm, residual, use_linear)
         self.batch_norms = torch.nn.ModuleList()
 
@@ -29,30 +29,30 @@ class GIN(BaseGNNModel):
                 out_dim = out_channels
                 num_heads = 1
             mlp = Sequential(
-                Linear(in_channels, 2 * hidden_channels),
-                BatchNorm(2 * hidden_channels),
+                Linear(in_dim, 2 * hidden_channels),
+                BatchNorm1d(2 * hidden_channels),
                 ReLU(),
                 Linear(2 * hidden_channels, hidden_channels),
             )
             conv = GINConv(mlp, train_eps=True)
             self.convs.append(conv)
-            self.batch_norms.append(BatchNorm(hidden_channels))
+            self.batch_norms.append(BatchNorm1d(hidden_channels))
 
-            self.lin1 = Linear(hidden_channels, hidden_channels)
-            self.batch_norm1 = BatchNorm(hidden_channels)
-            self.lin2 = Linear(hidden_channels, out_channels)
-                
+        self.lin1 = Linear(hidden_channels, hidden_channels)
+        self.batch_norm1 = BatchNorm1d(hidden_channels)
+        self.lin2 = Linear(hidden_channels, out_channels)
+
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args, **kwargs) -> Tensor:
         for idx, (conv, batch_norm) in enumerate(zip(self.convs, self.batch_norms)):
-            x = F.relu(batch_norm(conv(x, edge_index)))
+            x = F.relu(batch_norm(conv(x, adj_t)))
             if self.use_linear:
                 linear = self.lins[idx](x)
                 h = h + linear
             if self.residual and h.size(-1) == x.size(-1):
                 h += x[:h.size(0)]
-        
-        x = global_add_pool(x, batch)
+
+        #x = global_add_pool(x, batch)
         x = F.relu(self.batch_norm1(self.lin1(x)))
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin2(x)
@@ -74,7 +74,7 @@ class GIN(BaseGNNModel):
                 h += x[:h.size(0)]
             h = F.relu(h)
         return h
-    
+
 
     @torch.no_grad()
     def mini_inference(self, x_all, loader):
@@ -89,7 +89,7 @@ class GIN(BaseGNNModel):
                 pbar.update(batch_size)
             x_all = torch.cat(xs, dim=0)
         pbar.close()
-        return x_all    
+        return x_all
 
 class GIN_MLP(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
@@ -98,27 +98,27 @@ class GIN_MLP(BaseGNNModel):
                  batch_norm: bool = False, residual: bool = False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
-        super(GIN_MLP, self).__init__(in_channels, hidden_channels, out_channels, 
+        super(GIN_MLP, self).__init__(in_channels, hidden_channels, out_channels,
                                   num_layers, dropout, batch_norm, residual)
         # self.alpha, self.theta = alpha, theta
 
         if load_pretrained_backbone:
             self.GIN = GIN.from_pretrained(
-                in_channels=in_channels, 
+                in_channels=in_channels,
                 hidden_channels=hidden_channels,
                 out_channels=out_channels,
                 saved_ckpt_path=saved_ckpt_path,
-                num_layers=num_layers, 
-                dropout=dropout, 
-                batch_norm=batch_norm, 
+                num_layers=num_layers,
+                dropout=dropout,
+                batch_norm=batch_norm,
                 residual=residual)
         else:
             self.GIN = GIN(in_channels=in_channels, hidden_channels=hidden_channels, out_channels=out_channels, \
-                            num_layers=num_layers, heads = heads, dropout=dropout, batch_norm=batch_norm, residual=residual)
+                            num_layers=num_layers, dropout=dropout, batch_norm=batch_norm, residual=residual)
         self.MLP = MLP(in_channels=in_channels, hidden_channels=hidden_channels,
                         out_channels=out_channels, num_layers=num_layers, dropout=dropout,
                         batch_norm=batch_norm, residual=residual)
-        
+
         self.mlp_freezed = True
         if load_pretrained_backbone:
             self.freeze_layer(self.GIN, freeze=True)
@@ -136,18 +136,18 @@ class GIN_MLP(BaseGNNModel):
         if self.GIN.batch_norm:
             for bn in self.GIN.bns:
                 bn.reset_parameters()
-        
+
         ### reset MLP parameters
         for lin in self.MLP.lins:
             lin.reset_parameters()
         if self.MLP.batch_norm:
             for bn in self.MLP.bns:
                 bn.reset_parameters()
-    
+
     def freeze_layer(self, model, freeze=True):
         for name, p in model.named_parameters():
             p.requires_grad = not freeze
-            
+
     def freeze_module(self, train=True):
         ### train indicates whether train/eval editable ability
         if train:
@@ -163,7 +163,7 @@ class GIN_MLP(BaseGNNModel):
         GIN_out = self.GIN(x, adj_t, *args)
         if self.mlp_freezed:
             x = GIN_out
-        else:   
+        else:
             MLP_out = self.MLP(x, *args)
             x = GIN_out + MLP_out
         return x
