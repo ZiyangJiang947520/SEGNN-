@@ -12,6 +12,7 @@ import yaml
 import editable_gnn.models as models
 from data import get_data, prepare_dataset
 from editable_gnn import set_seeds_all, WholeGraphEditor, BaseEditor, EnnConfig, ENN
+from editable_gnn.utils import str2bool
 
 
 parser = argparse.ArgumentParser()
@@ -29,6 +30,29 @@ parser.add_argument('--saved_model_path', type=str, required=True,
 parser.add_argument('--output_dir', default='./finetune', type=str)
 parser.add_argument('--runs', default=1, type=int,
                     help='number of runs')
+parser.add_argument('--finetune_between_edit', type=str2bool, default=False,
+                        help="whether to finetune the MLP between editing")
+parser.add_argument('--stop_edit_only', type=str2bool, default=False,
+                        help="whether to stop when the edit target is correct")
+parser.add_argument('--stop_full_edit', type=str2bool, default=False,
+                        help="whether to stop when all of the edit targets are correct")
+parser.add_argument('--iters_before_stop', type=int, default=0,
+                        help="more iterations to run before full stopping")
+parser.add_argument('--full_edit', type=int, default=0,
+                        help="whether to edit both the gnn and mlp")
+parser.add_argument('--pure_egnn', type=int, default=0,
+                        help="whether to use pure egnn in the first iterations")
+parser.add_argument('--mixup_k_nearest_neighbors', type=str2bool, default=False,
+                        help="whether to sample k nearest neighbors for training mixup")
+parser.add_argument('--incremental_batching', type=str2bool, default=False,
+                        help="whether to do incremental batching edit")
+parser.add_argument('--half_half', type=str2bool, default=False,
+                        help="half and half mixup")
+parser.add_argument('--half_half_ratio_mixup', type=float, default=0.5,
+                        help="ratio for half and half mixup. This ratio is used as ratio of NN samples in the mixup.")
+parser.add_argument('--sliding_batching', type=int, default=0,
+                        help="whether to do sliding batching edit")
+parser.add_argument('--num_mixup_training_samples', default=0, type=int)
 
 
 if __name__ == '__main__':
@@ -54,7 +78,9 @@ if __name__ == '__main__':
     else:
         multi_label = False
     MODEL_FAMILY = getattr(models, model_config['arch_name'])
-    data, num_features, num_classes = get_data(args.root, args.dataset)
+    sign_transform = False
+    sign_k = None
+    data, num_features, num_classes = get_data(args.root, args.dataset, sign_transform=sign_transform, sign_k=sign_k)
     model = MODEL_FAMILY.from_pretrained(in_channels=num_features, 
                                 out_channels=num_classes, 
                                 saved_ckpt_path=args.saved_model_path,
