@@ -66,7 +66,7 @@ class GCN2(BaseGNNModel):
         x = self.activation(h)
         x = self.dropout(x)
         x = self.lins[1](x)
-        return x
+        return x.log_softmax(dim=-1)
 
 
     @torch.no_grad()
