@@ -17,11 +17,11 @@ class GAT(BaseGNNModel):
                  batch_norm: bool = False, residual: bool = False, use_linear=False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
-        super(GAT, self).__init__(in_channels, hidden_channels, out_channels, 
+        super(GAT, self).__init__(in_channels, hidden_channels, out_channels,
                                   num_layers, dropout, batch_norm, residual, use_linear)
         num_heads = heads
         for i in range(num_layers):
-            in_dim = out_dim = hidden_channels ** (i + 1)
+            in_dim = out_dim = hidden_channels * (heads ** i)
             if i == 0:
                 in_dim = in_channels
             if i == num_layers - 1:
@@ -31,7 +31,7 @@ class GAT(BaseGNNModel):
             self.convs.append(conv)
             if self.use_linear:
                 self.lins.append(torch.nn.Linear(in_dim, out_dim, bias=False))
-                
+
 
     def forward(self, x: Tensor, adj_t: SparseTensor, *args, **kwargs) -> Tensor:
         for idx in range(self.num_layers - 1):
@@ -70,7 +70,7 @@ class GAT(BaseGNNModel):
                 h += x[:h.size(0)]
             h = F.relu(h)
         return h
-    
+
 
     @torch.no_grad()
     def mini_inference(self, x_all, loader):
@@ -85,7 +85,7 @@ class GAT(BaseGNNModel):
                 pbar.update(batch_size)
             x_all = torch.cat(xs, dim=0)
         pbar.close()
-        return x_all    
+        return x_all
 
 class GAT_MLP(BaseGNNModel):
     def __init__(self, in_channels: int, hidden_channels: int,
@@ -94,19 +94,19 @@ class GAT_MLP(BaseGNNModel):
                  batch_norm: bool = False, residual: bool = False,
                  load_pretrained_backbone: bool = False,
                  saved_ckpt_path: str = ''):
-        super(GAT_MLP, self).__init__(in_channels, hidden_channels, out_channels, 
+        super(GAT_MLP, self).__init__(in_channels, hidden_channels, out_channels,
                                   num_layers, dropout, batch_norm, residual)
         # self.alpha, self.theta = alpha, theta
 
         if load_pretrained_backbone:
             self.GAT = GAT.from_pretrained(
-                in_channels=in_channels, 
+                in_channels=in_channels,
                 hidden_channels=hidden_channels,
                 out_channels=out_channels,
                 saved_ckpt_path=saved_ckpt_path,
-                num_layers=num_layers, 
-                dropout=dropout, 
-                batch_norm=batch_norm, 
+                num_layers=num_layers,
+                dropout=dropout,
+                batch_norm=batch_norm,
                 residual=residual)
         else:
             self.GAT = GAT(in_channels=in_channels, hidden_channels=hidden_channels, out_channels=out_channels, \
@@ -114,7 +114,7 @@ class GAT_MLP(BaseGNNModel):
         self.MLP = MLP(in_channels=in_channels, hidden_channels=hidden_channels,
                         out_channels=out_channels, num_layers=num_layers, dropout=dropout,
                         batch_norm=batch_norm, residual=residual)
-        
+
         self.mlp_freezed = True
         if load_pretrained_backbone:
             self.freeze_layer(self.GAT, freeze=True)
@@ -132,18 +132,18 @@ class GAT_MLP(BaseGNNModel):
         if self.GAT.batch_norm:
             for bn in self.GAT.bns:
                 bn.reset_parameters()
-        
+
         ### reset MLP parameters
         for lin in self.MLP.lins:
             lin.reset_parameters()
         if self.MLP.batch_norm:
             for bn in self.MLP.bns:
                 bn.reset_parameters()
-    
+
     def freeze_layer(self, model, freeze=True):
         for name, p in model.named_parameters():
             p.requires_grad = not freeze
-            
+
     def freeze_module(self, train=True):
         ### train indicates whether train/eval editable ability
         if train:
@@ -159,7 +159,7 @@ class GAT_MLP(BaseGNNModel):
         GAT_out = self.GAT(x, adj_t, *args)
         if self.mlp_freezed:
             x = GAT_out
-        else:   
+        else:
             MLP_out = self.MLP(x, *args)
             x = GAT_out + MLP_out
         return x
