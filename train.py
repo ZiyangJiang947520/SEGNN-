@@ -46,6 +46,8 @@ parser.add_argument('--half_half_ratio_mixup', type=float, default=0.5,
 parser.add_argument('--sliding_batching', type=int, default=0,
                         help="whether to do sliding batching edit")
 parser.add_argument('--num_mixup_training_samples', default=0, type=int)
+parser.add_argument('--wrong_ratio_mixup', type=float, default=0.0,
+                        help="ratio for wrong samples. This ratio is used as ratio of wrong samples in the mixup.")
 
 if __name__ == '__main__':
     args = parser.parse_args()

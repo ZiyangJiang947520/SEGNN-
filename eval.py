@@ -54,6 +54,8 @@ parser.add_argument('--half_half', type=str2bool, default=False,
                         help="half and half mixup")
 parser.add_argument('--half_half_ratio_mixup', type=float, default=0.5,
                         help="ratio for half and half mixup. This ratio is used as ratio of NN samples in the mixup.")
+parser.add_argument('--wrong_ratio_mixup', type=float, default=0.0,
+                        help="ratio for wrong samples. This ratio is used as ratio of wrong samples in the mixup.")
 parser.add_argument('--sliding_batching', type=int, default=0,
                         help="whether to do sliding batching edit")
 
@@ -226,6 +228,8 @@ if __name__ == '__main__':
             json_name += f"_{args.full_edit}_full_edit_"
         if args.pure_egnn:
             json_name += f"_{args.pure_egnn}_pure_egnn_"
+        if args.wrong_ratio_mixup:
+            json_name += f"_{args.wrong_ratio_mixup}_wrong_sample_mixup_"
         json_name += f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
