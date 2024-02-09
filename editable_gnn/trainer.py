@@ -278,6 +278,9 @@ class BaseTrainer(object):
                     num_hop += 1
                     neighbors, _, _, _ = k_hop_subgraph(center_node_idx, num_hops=num_hop, edge_index=self.whole_data.edge_index)
                 right_pred_set = right_pred_set.squeeze().cpu().numpy().tolist()
+                #select wrong samples for mixup
+                if self.wrong_ratio_mixup > 0:
+                    right_pred_set = torch.range(0, len(train_y_true) - 1).type(torch.LongTensor).to(dvc)
                 neighbors = neighbors.cpu().numpy().tolist()
                 #pdb.set_trace()
                 right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).type(torch.LongTensor).to(dvc)
@@ -290,15 +293,6 @@ class BaseTrainer(object):
                                                             train_pred_set[torch.randperm(len(train_pred_set))[int(num_samples * self.half_half_ratio_mixup):num_samples]]), dim=0)
             else:
                 train_mixup_training_samples_idx = right_pred_set[torch.randperm(len(right_pred_set))[:num_samples]].type(torch.LongTensor)
-            
-            #select wrong samples for mixup
-            if self.wrong_ratio_mixup > 0:
-                wrong_pred_set = train_y_pred.ne(train_y_true).nonzero()
-                train_mixup_training_samples_idx = torch.cat((
-                    wrong_pred_set[torch.randperm(len(wrong_pred_set))[int(:num_samples * self.wrong_ratio_mixup)]].type(torch.LongTensor).to(dvc),
-                    train_mixup_training_samples_idx[int(num_samples * self.wrong_ratio_mixup):num_samples]), 
-                    dim = 0
-                )
 
             #pdb.set_trace()
             mixup_training_samples_idx = nodes_set[train_mixup_training_samples_idx]
