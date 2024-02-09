@@ -780,7 +780,7 @@ class BaseTrainer(object):
         y_pred = out.argmax(dim=-1)
         success = int(y_pred.eq(label).sum()) / label.size(0)
         torch.cuda.synchronize()
-        print(f'I am here {idx}')
+        #print(f'I am here {idx}')
         return success
 
 class WholeGraphTrainer(BaseTrainer):
@@ -832,7 +832,7 @@ class WholeGraphTrainer(BaseTrainer):
             y_pred = out.argmax(dim=-1)[idx]
         success = int(y_pred.eq(label).sum()) / label.size(0)
         torch.cuda.synchronize()
-        print(f'I am here {idx}')
+        #print(f'I am here {idx}')
         return success
 
 

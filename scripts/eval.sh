@@ -22,7 +22,7 @@ criterion=wrong2correct
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
 for dataset in cora coauthorcs amazoncomputers amazonphoto arxiv; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
-for model in gcn sage gin gat; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
+for model in gcn_mlp sage_mlp gin_mlp gat_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi
@@ -44,7 +44,7 @@ for model in gcn sage gin gat; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
         --incremental_batching True \
         --sliding_batching 0 \
         --pure_egnn 0 \
-        --wrong_ratio_mixup 0.25 \
+        --wrong_ratio_mixup 0.5 \
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
 done
