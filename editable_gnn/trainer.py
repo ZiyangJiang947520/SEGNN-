@@ -280,10 +280,14 @@ class BaseTrainer(object):
                 right_pred_set = right_pred_set.squeeze().cpu().numpy().tolist()
                 #select wrong samples for mixup
                 if self.wrong_ratio_mixup > 0:
-                    right_pred_set = torch.range(0, len(train_y_true) - 1).type(torch.LongTensor).to(dvc)
-                neighbors = neighbors.cpu().numpy().tolist()
+                    right_pred_set = torch.zeros(len(whole_data.y)).bool().to(dvc)
+                    for i in neighbors:
+                        right_pred_set[i] = True
+                    right_pred_set = right_pred_set[whole_data.train_mask].nonzero().type(torch.LongTensor).to(dvc)
+                else:
                 #pdb.set_trace()
-                right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).type(torch.LongTensor).to(dvc)
+                    right_pred_set = torch.Tensor([int(i) for i in right_pred_set if i in neighbors]).unsqueeze(dim=1).type(torch.LongTensor).to(dvc)
+                #right_pred_set = neighbors.unsqueeze(dim=1).type(torch.LongTensor).to(dvc)
 
             half_half = self.half_half
             if half_half:
