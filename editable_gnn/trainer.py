@@ -631,8 +631,8 @@ class BaseTrainer(object):
             hop_drawdown = {}
             for n_hop in range(1, N_HOP + 1):
                 hop_drawdown[n_hop] = {
-                                    f'{n_hop}_pre_edit_acc' : bef_edit_hop_acc[n_hop] * 100,
-                                    f'{n_hop}_hops_DD': np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
+                                    f'{n_hop}_pre_edit_acc' : np.round(np.mean(bef_edit_hop_acc[n_hop]), decimals=3) * 100,
+                                    f'{n_hop}_hops_DD': np.round(np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]), decimals=3) * 100
                                     }
             # pdb.set_trace()
         elif eval_setting == 'batch':
