@@ -503,7 +503,7 @@ class BaseTrainer(object):
         return results_temporary
 
 
-    def batch_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, manner='GD', mixup_training_samples_idx = None, mixup_label = None):
+    def batch_edit(self, node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=0, manner='GD', mixup_training_samples_idx = None, mixup_label = None):
         self.model.train()
         model = deepcopy(self.model)
         optimizer = self.get_optimizer(self.model_config, model)
@@ -551,6 +551,10 @@ class BaseTrainer(object):
             #get success
             success = self.success_rate(model, node_idx_2flip[:idx+1].squeeze(dim=1), flipped_label[:idx+1].squeeze(dim=1))
             res = [*self.test(edited_model, whole_data), success, steps]
+            hop_res = []
+            for n_hop in range(1, num_htop+1):
+                hop_res.append(self.get_khop_neighbors_acc(model, n_hop, idx))
+            res.append(hop_res)
             results_temporary.append(res)
         return results_temporary
 
@@ -582,7 +586,7 @@ class BaseTrainer(object):
         for n_hop in range(1, N_HOP + 1):
             bef_edit_hop_acc[n_hop] = []
             for idx in node_idx_2flip:
-                bef_edit_hop_acc[n_hop].append(self.get_khop_neighbors_acc(self.model, 1, idx))
+                bef_edit_hop_acc[n_hop].append(self.get_khop_neighbors_acc(self.model, n_hop, idx))
         assert eval_setting in ['sequential', 'independent', 'batch']
         if eval_setting == 'sequential':
             results_temporary = self.sequential_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner)
@@ -603,10 +607,10 @@ class BaseTrainer(object):
             success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
             success_list = np.round(np.array(succeses), decimals = 3).tolist()
             table_result = {
-                '1': (test_drawdown[0], success_list[0]),
-                '10': (test_drawdown[9], success_list[9]),
-                '25': (test_drawdown[24], success_list[24]),
-                '50': (test_drawdown[49], success_list[49])
+                '1st': (test_drawdown[0], success_list[0]),
+                '10th': (test_drawdown[9], success_list[9]),
+                '25th': (test_drawdown[24], success_list[24]),
+                '50th': (test_drawdown[49], success_list[49])
             }
             hop_drawdown = {}
         elif eval_setting == 'independent' :
@@ -625,8 +629,10 @@ class BaseTrainer(object):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
             # pdb.set_trace()
         elif eval_setting == 'batch':
-            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, manner, mixup_training_samples_idx = mixup_training_samples_idx, mixup_label = mixup_label)
-            train_acc, val_acc, test_acc, succeses, steps = zip(*results_temporary)
+            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP, manner, mixup_training_samples_idx = mixup_training_samples_idx, mixup_label = mixup_label)
+            train_acc, val_acc, test_acc, succeses, steps, hop_acc = zip(*results_temporary)
+            #pdb.set_trace()
+            hop_acc = np.vstack(hop_acc)
             tra_drawdown = bef_edit_tra_acc - train_acc[-1]
             val_drawdown = bef_edit_val_acc - val_acc[-1]
             test_drawdown = test_drawdown = np.round((np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals = 3).tolist()
@@ -638,7 +644,15 @@ class BaseTrainer(object):
 
             success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
             success_list = np.round(np.array(succeses), decimals = 3).tolist()
+
             hop_drawdown = {}
+            for n_hop in range(1, N_HOP + 1):
+                hop_drawdown[n_hop] = {f'mean_{n_hop}_hops_DD' : np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100,
+                                    f'1st_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][0] - hop_acc[0, n_hop-1]),
+                                    f'10th_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][9] - hop_acc[9, n_hop-1]),
+                                    f'25th_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][24] - hop_acc[24, n_hop-1]),
+                                    f'50th_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][49] - hop_acc[49, n_hop-1])}
+        
             average_dd = np.round(np.mean(np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals=3) * 100
             test_drawdown = [test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown]
             test_dd_std = np.std(test_drawdown)
