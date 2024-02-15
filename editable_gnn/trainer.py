@@ -633,7 +633,7 @@ class BaseTrainer(object):
                 hop_drawdown[n_hop] = np.mean(bef_edit_hop_acc[n_hop] - hop_acc[:, n_hop-1]) * 100
             # pdb.set_trace()
         elif eval_setting == 'batch':
-            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP, manner, mixup_training_samples_idx = mixup_training_samples_idx, mixup_label = mixup_label)
+            results_temporary = self.batch_edit(node_idx_2flip, flipped_label, whole_data, max_num_step, num_htop=N_HOP, manner=manner, mixup_training_samples_idx = mixup_training_samples_idx, mixup_label = mixup_label)
             train_acc, val_acc, test_acc, succeses, steps, hop_acc = zip(*results_temporary)
             #pdb.set_trace()
             hop_acc = np.vstack(hop_acc)
@@ -656,7 +656,7 @@ class BaseTrainer(object):
                                     f'10th_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][9] - hop_acc[9, n_hop-1]),
                                     f'25th_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][24] - hop_acc[24, n_hop-1]),
                                     f'50th_edit_{n_hop}_hops_DD': (bef_edit_hop_acc[n_hop][49] - hop_acc[49, n_hop-1])}
-        
+
             average_dd = np.round(np.mean(np.array([bef_edit_tst_acc] * len(test_acc)) - np.array(test_acc)), decimals=3) * 100
             test_drawdown = [test_drawdown * 100] if not isinstance(test_drawdown, list) else [round(d * 100, 1) for d in test_drawdown]
             test_dd_std = np.std(test_drawdown)
