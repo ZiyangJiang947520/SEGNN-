@@ -43,8 +43,9 @@ Here is the brief descriptions of all the flags for editing the pretrained model
 * ```--half_half```: this flag is used to indicate if we would like to mix any nearest neighbors (NN) into the mixup training samples. If this is true, the ```--half_half_ratio_mixup``` flag is used to indicate the fraction of NN in the mixup samples in the batch. ```--mixup_k_nearest_neighbors``` also needs to be true in order to mixup random training samples + NN. If this is false, and ```--mixup_k_nearest_neighbors``` is true, only NN are used as mixup samples. If this is false and ```--mixup_k_nearest_neighbors``` is false, only random samples are used as mixup samples.
 * ```--iters_before_stop k```: this flag is used to indicate if we would like to run k more iterations after the editing process is stopped.
 * ```--full_edit k```: this flag is used to indicate if we would like to update both the GNN & MLP during the first k editing steps. By default, it is 0, meaning only the MLP is updated.
-* ```--incremental_batching```: this flag is used to indicate if we would like to batch all editing targets from 1 to i when we are editing target i. If this is false, we are using ```sequential_edit``` setting, i.e. only the current editing target is in the batch (+ mixup if there is any).
+* ```--incremental_batching```: this flag is used to indicate if we would like to batch all editing targets from 1 to i when we are editing target i. If this is false, we are batching only the current editing target with mixup samples (if there is any).
 * ```--sliding_batching```: this flag is used if we would like to have sliding window over which editing targets to batch.
+* ```--pure_egnn```: this flag is used to indicate how many first steps we would like to edit the GNN & freeze the MLP during editing a target. Default value is 0, meaning we only update the MLP while freezing the GNN.
 * ```--wrong_ratio_mixup```: this flaf is used to indicate if we would like to also mixup wrong NN in the batch.
 
 **Note**: the editing result would be "batch_edit" in the output json files.
