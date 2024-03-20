@@ -164,8 +164,11 @@ if __name__ == '__main__':
     node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
     mixup_training_samples_idx, mixup_label =  mixup_training_samples_idx.cuda(), mixup_label.cuda()
 
-    print(f'the calculated stats averaged over {args.num_samples} sequential edit '
-            f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
+    print(f'=======================================')
+    print(f'============= EGNN ====================')
+    print(f'=======================================')
+
+
     seq_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
                                         flipped_label=flipped_label,
                                         whole_data=whole_data,
@@ -173,21 +176,14 @@ if __name__ == '__main__':
                                         bef_edit_results=bef_edit_results,
                                         eval_setting='sequential',
                                         manner=args.manner)
+    print(f'the calculated stats after sequentially editting {args.num_samples} edit targets independently, '
+            f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
     print(seq_results)
 
-    print(f'the calculated stats after {args.num_samples} independent edit '
-            f'max allocated steps: {MAX_NUM_EDIT_STEPS}')
-    ind_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
-                                        flipped_label=flipped_label,
-                                        whole_data=whole_data,
-                                        max_num_step=MAX_NUM_EDIT_STEPS,
-                                        bef_edit_results=bef_edit_results,
-                                        eval_setting='independent',
-                                        manner=args.manner)
-    print(ind_results)
+    print(f'=======================================')
+    print(f'============== SEGNN ==================')
+    print(f'=======================================')
 
-    print(f'the calculated stats after batch edit with batch size {args.num_samples}, '
-            f'max allocated steps: {MAX_NUM_EDIT_STEPS_FOR_BATCH}')
     batch_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
                                         flipped_label=flipped_label,
                                         whole_data=whole_data,
@@ -197,9 +193,12 @@ if __name__ == '__main__':
                                         manner=args.manner,
                                         mixup_training_samples_idx=mixup_training_samples_idx,
                                         mixup_label=mixup_label)
+
+    print(f'the calculated stats after batch-editting {args.num_samples} edit targets, '
+            f'max allocated steps: {MAX_NUM_EDIT_STEPS_FOR_BATCH}')
     print(batch_results)
+    
     summary = {'seq_edit': seq_results,
-               'ind_edit': ind_results,
                'batch_edit': batch_results,
                'model_config': model_config,
                'bef_edit_ft_results': bef_edit_ft_results}

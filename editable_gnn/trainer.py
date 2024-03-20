@@ -900,7 +900,7 @@ class WholeGraphTrainer(BaseTrainer):
                         self.iters_before_stop -= 1
         torch.cuda.synchronize()
         e = time.time()
-        print(f'max allocated mem: {torch.cuda.max_ _allocated() / (1024**2)} MB')
+        print(f'max allocated mem: {torch.cuda.max__allocated() / (1024**2)} MB')
         print(f'edit time: {e - s}')
         return model, success, loss, step
 
