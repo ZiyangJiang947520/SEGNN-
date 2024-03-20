@@ -606,7 +606,7 @@ class BaseTrainer(object):
             tra_std = None
             val_std = None
             test_std = None
-            #ipdb.set_trace()
+            #pdb.set_trace()
 
             success_rate = np.round(np.mean(succeses), decimals = 3).tolist()
             success_list = np.round(np.array(succeses), decimals = 3).tolist()

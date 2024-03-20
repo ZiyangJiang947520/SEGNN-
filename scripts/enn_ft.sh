@@ -3,8 +3,8 @@ output_dir=./ckpts/enn_ft
 criterion=wrong2correct
 
 
-for dataset in cora amazoncomputers amazonphoto coauthorcs arxiv; do
-for model in gcn sage gat gin; do
+for dataset in products; do
+for model in gcn sage gin gat; do
     if ! [ -d "./${output_dir}/${dataset}" ]; then
         mkdir -p "./${output_dir}/${dataset}"
     fi
