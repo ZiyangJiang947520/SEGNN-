@@ -6,6 +6,10 @@ import editable_gnn.models as models
 from data import get_data, prepare_dataset
 from editable_gnn import WholeGraphTrainer, BaseTrainer, set_seeds_all
 from editable_gnn.utils import str2bool
+import torch
+from data import get_data, prepare_dataset, prepare_dataset_onehot_y, prepare_dataset_x, generate_gmixup_data, prepare_gmixup_dataset, preprocess_labels
+from collections import Counter
+from torch_geometric.data import Data
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config', type=str, required=True,
@@ -48,6 +52,14 @@ parser.add_argument('--sliding_batching', type=int, default=0,
 parser.add_argument('--num_mixup_training_samples', default=0, type=int)
 parser.add_argument('--wrong_ratio_mixup', type=float, default=0.0,
                         help="ratio for wrong samples. This ratio is used as ratio of wrong samples in the mixup.")
+parser.add_argument('--use_betweenness_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use betweenness centrality.")
+parser.add_argument('--use_closeness_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use closeness centrality.")
+parser.add_argument('--use_eigenvector_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use eigenvector centrality.")
+parser.add_argument('--use_combined_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use combined (degree and betweenness) centrality.")
 
 if __name__ == '__main__':
     args = parser.parse_args()
@@ -88,11 +100,76 @@ if __name__ == '__main__':
         to_inductive = False
     else:
         to_inductive = True
-    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=True, inductive=to_inductive)
+
+    # # 加载数据集
+    # data, num_features, num_classes = get_data(args.root, args.dataset, sign_transform=sign_transform, sign_k=sign_k)
+    #
+    # # 确保 data 是 Data 对象的列表
+    # if isinstance(data, Data):
+    #     data = [data]
+    #
+    # # 打印数据集信息，确保加载正确
+    # print("Number of graphs in the dataset:", len(data))
+    # print("Example graph:", data[0])
+    #
+    # # 获取节点级别的标签并打印标签分布
+    # labels = [int(label) for label in data[0].y]
+    # label_counts = Counter(labels)
+    # print("Label distribution in the dataset:", label_counts)
+    #
+    # if len(label_counts) < 2:
+    #     raise ValueError("The dataset must contain at least two classes for mixup.")
+    #
+    # # Prepare G-Mixup data
+    # aug_ratio = 0.15  # Example value, adjust as necessary
+    # aug_num = 10  # Example value, adjust as necessary
+    # lam_range = [0.005, 0.01]  # Example value, adjust as necessary
+    #
+    # dataset = prepare_gmixup_dataset(data, aug_ratio, aug_num, lam_range, args.seed)
+    # # Save the prepared dataset for future use
+    # gmixup_data_path = os.path.join(args.output_dir, args.dataset, 'gmixup_data.pt')
+    # torch.save(dataset, gmixup_data_path)
+    # print(f'G-Mixup data saved to {gmixup_data_path}')
+
+    train_data, whole_data = prepare_dataset(model_config, data, args, remove_edge_index=False, inductive=to_inductive)
     del data
+    print("whole_data.edge_index:", whole_data.edge_index)
     print(f'training data: {train_data}')
     print(f'whole data: {whole_data}')
     #ipdb.set_trace()
+
+    if args.use_betweenness_centrality:
+        betweenness_centrality = BaseTrainer.compute_betweenness_centrality(whole_data.edge_index,
+                                                                            whole_data.num_nodes)
+        centrality_save_path = os.path.join(args.output_dir, args.dataset, 'betweenness_centrality.pt')
+        torch.save(betweenness_centrality, centrality_save_path)
+
+    elif args.use_closeness_centrality:
+        closeness_centrality = BaseTrainer.compute_closeness_centrality(whole_data.edge_index,
+                                                                            whole_data.num_nodes)
+        centrality_save_path = os.path.join(args.output_dir, args.dataset, 'closeness_centrality.pt')
+        torch.save(closeness_centrality, centrality_save_path)
+
+    elif args.use_eigenvector_centrality:
+        eigenvector_centrality = BaseTrainer.compute_eigenvector_centrality(whole_data.edge_index,
+                                                                            whole_data.num_nodes)
+        centrality_save_path = os.path.join(args.output_dir, args.dataset, 'eigenvector_centrality.pt')
+        torch.save(eigenvector_centrality, centrality_save_path)
+
+    # Save the graphon model
+    class_graphs = split_class_graphs(dataset[:train_nums])
+    graphons = []
+    for label, graphs in class_graphs:
+        align_graphs_list, normalized_node_degrees, max_num, min_num = align_graphs(graphs, padding=True,
+                                                                                    N=resolution)
+        graphon = universal_svd(align_graphs_list, threshold=0.2)
+        graphons.append((label, graphon))
+
+    graphon_save_path = os.path.join(args.output_dir, args.dataset, 'graphon_model.pt')
+    torch.save(graphons, graphon_save_path)
+    print(f'Graphon model saved to {graphon_save_path}')
+
+
     TRAINER_CLS = BaseTrainer if  model_config['arch_name'] == 'MLP' else WholeGraphTrainer
     trainer = TRAINER_CLS(args, model, train_data, whole_data, model_config,
                           args.output_dir, args.dataset, multi_label,

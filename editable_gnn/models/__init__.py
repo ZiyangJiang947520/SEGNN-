@@ -9,6 +9,8 @@ from .gcn_mlp import GCN_MLP
 from .sage_mlp import SAGE_MLP
 from .gat import GAT, GAT_MLP
 from .gin import GIN, GIN_MLP
+from .gcn_mlp_with_hidden import GCN_MLP_WITH_HIDDEN
+from .gcn_mlp_with_lstm import GCN_MLP_WITH_LSTM
 
 __all__ = [
     'GCN',
@@ -25,5 +27,7 @@ __all__ = [
     'SIGN_MLP',
     'GCN2_MLP',
     'GAT_MLP',
-    'GIN_MLP'
+    'GIN_MLP',
+    'GCN_MLP_WITH_HIDDEN',
+    'GCN_MLP_WITH_LSTM'
 ]

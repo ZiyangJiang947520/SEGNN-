@@ -14,7 +14,13 @@ from torch_geometric.datasets import (Planetoid, WikiCS, Coauthor, Amazon,
 from ogb.nodeproppred import PygNodePropPredDataset
 from torch_geometric.utils import subgraph
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
+import torch.nn.functional as F  # 添加这个导入
+import random
+from collections import Counter
 
+#============================G-mixup
+from Gutils import stat_graph, split_class_graphs, align_graphs, two_graphons_mixup
+from graphon_estimator import universal_svd
 
 def gen_masks(y: Tensor, train_per_class: int = 20, val_per_class: int = 30,
               num_splits: int = 20) -> Tuple[Tensor, Tensor, Tensor]:
@@ -266,3 +272,107 @@ def prepare_dataset(model_config, data, args, remove_edge_index=True, inductive=
     preprocess_data(model_config, train_data)
     preprocess_data(model_config, data)
     return train_data, data
+
+
+# =========================================以下是给G-mixup的
+
+def prepare_dataset_onehot_y(dataset):
+    y_set = set()
+    all_labels = []  # 用于存储所有标签
+    for data in dataset:
+        if data.y.dim() == 0:
+            y_set.add(int(data.y.item()))  # 使用 item() 将单元素张量转换为标量
+            all_labels.append(int(data.y.item()))  # 添加到标签列表
+        else:
+            y_set.update(data.y.tolist())  # 将多元素张量转换为列表并添加到集合中
+            all_labels.extend(data.y.tolist())  # 添加到标签列表
+
+    num_classes = max(all_labels) + 1  # 确保 num_classes 是标签中的最大值加 1
+    print(f"All labels: {all_labels}")  # 打印所有标签
+    print(f"Number of classes: {num_classes}")  # 打印类别数
+
+    for data in dataset:
+        if data.y.dim() == 0:
+            data.y = F.one_hot(data.y, num_classes=num_classes).to(torch.float)[0]
+        else:
+            data.y = F.one_hot(data.y, num_classes=num_classes).to(torch.float).sum(dim=0)
+    return dataset
+
+
+
+
+
+
+
+def prepare_dataset_x(dataset):
+    if dataset[0].x is None:
+        max_degree = 0
+        degs = []
+        for data in dataset:
+            degs += [degree(data.edge_index[0], dtype=torch.long)]
+            max_degree = max(max_degree, degs[-1].max().item())
+            data.num_nodes = int(torch.max(data.edge_index)) + 1
+
+        if max_degree < 2000:
+            for data in dataset:
+                degs = degree(data.edge_index[0], dtype=torch.long)
+                data.x = F.one_hot(degs, num_classes=max_degree + 1).to(torch.float)
+        else:
+            deg = torch.cat(degs, dim=0).to(torch.float)
+            mean, std = deg.mean().item(), deg.std().item()
+            for data in dataset:
+                degs = degree(data.edge_index[0], dtype=torch.long)
+                data.x = ((degs - mean) / std).view(-1, 1)
+    return dataset
+
+def generate_gmixup_data(dataset, aug_ratio, aug_num, lam_range, seed):
+    class_graphs = split_class_graphs(dataset)
+    print(f"Class graphs: {len(class_graphs)} classes found")
+    graphons = []
+    for label, graphs in class_graphs.items():
+        print(f"Processing class: {label}, number of graphs: {len(graphs)}")
+        align_graphs_list, normalized_node_degrees, max_num, min_num = align_graphs(graphs, padding=True)
+        graphon = universal_svd(align_graphs_list, threshold=0.2)
+        graphons.append((label, graphon))
+
+    if len(graphons) < 2:
+        raise ValueError("Not enough graphons to perform mixup. Ensure there are at least 2 classes of graphs.")
+
+    num_sample = int(len(dataset) * aug_ratio / aug_num)
+    lam_list = np.random.uniform(low=lam_range[0], high=lam_range[1], size=(aug_num,))
+
+    random.seed(seed)
+    new_graphs = []
+    for lam in lam_list:
+        two_graphons = random.sample(graphons, 2)
+        new_graphs += two_graphons_mixup(two_graphons, la=lam, num_sample=num_sample)
+
+    return new_graphs
+
+
+
+
+
+def prepare_gmixup_dataset(dataset, aug_ratio, aug_num, lam_range, seed):
+    dataset = prepare_dataset_onehot_y(dataset)
+    dataset = prepare_dataset_x(dataset)
+
+    # 获取节点级别的标签
+    labels = [int(label) for label in dataset[0].y]
+    label_counts = Counter(labels)
+    print("Label distribution in the dataset:", label_counts)
+
+    if len(label_counts) < 2:
+        raise ValueError("The dataset must contain at least two classes for mixup.")
+
+    new_graphs = generate_gmixup_data(dataset, aug_ratio, aug_num, lam_range, seed)
+    dataset = new_graphs + dataset
+    return dataset
+
+
+def preprocess_labels(dataset):
+    for data in dataset:
+        if data.y.numel() > 1:
+            # 对于包含多个元素的标签，选择第一个元素作为标量标签
+            data.y = data.y[0].view(1)
+    return dataset

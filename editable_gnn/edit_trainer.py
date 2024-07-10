@@ -75,7 +75,9 @@ class BaseEditor(BaseTrainer):
                                                              self.original_model.out_channels, 
                                                              n_edits, 
                                                              'random', 
-                                                             from_valid_set=False)
+                                                             from_valid_set=False,
+                                                             )
+            # sort_by='betweenness'
             node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
             flip_flag = torch.rand(node_idx_2flip.shape, device=node_idx_2flip.device) > 0.5
             flip_flag = flip_flag.long()
@@ -158,7 +160,9 @@ class WholeGraphEditor(WholeGraphTrainer):
                                                              self.original_model.out_channels, 
                                                              n_edits, 
                                                              'random', 
-                                                             from_valid_set=False)
+                                                             from_valid_set=False,
+                                                             )
+            # sort_by='betweenness'
             node_idx_2flip, flipped_label = node_idx_2flip.cuda(), flipped_label.cuda()
             flip_flag = torch.rand(node_idx_2flip.shape, device=node_idx_2flip.device) > 0.5
             flip_flag = flip_flag.long()

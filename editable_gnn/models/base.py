@@ -43,7 +43,7 @@ class BaseModel(torch.nn.Module):
 
             # checkpoints = [str(x) for x in Path(saved_ckpt_path).glob(f"{cls.__name__}_run*.pt")]
             # glob_checkpoints = checkpoints
-            assert len(glob_checkpoints) == 1
+            # assert len(glob_checkpoints) == 1
             saved_ckpt_path = glob_checkpoints[0]
         print(f'load model weights from {saved_ckpt_path}')
         state_dict = torch.load(saved_ckpt_path, map_location='cpu')

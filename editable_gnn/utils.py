@@ -112,3 +112,4 @@ def str2bool(x):
         return bool(strtobool(x))
     else:
         raise ValueError(f'Unrecognised type {type(x)}')
+

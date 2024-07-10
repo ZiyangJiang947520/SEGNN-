@@ -39,7 +39,7 @@ parser.add_argument('--runs', default=1, type=int,
 parser.add_argument('--criterion', type=str, required=True, help='the criterion of how to select the node need to be patched.' \
                                                                   'currently only support ``wrong_to_correct`` and ``random``')
 parser.add_argument('--manner', type=str, required=True, default='GD', \
-                    choices=['GD','GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus'], help='edit manner for finetuning')
+                    choices=['GD','GD_Diff', 'Ada_GD_Diff', 'EDG', 'EDG_Plus','MSE', 'COSINE'], help='edit manner for finetuning')
 parser.add_argument('--hyper_Diff', default=1.0, type=float, help='the hyperparameter for Diff loss')
 parser.add_argument('--train_split', default=1, type=int, help='Training data split number for EDG_Plus')
 parser.add_argument('--gamma', default=1.0, type=float, help='the hyperparameter for adapative Diff loss')
@@ -69,8 +69,16 @@ parser.add_argument('--sliding_batching', type=int, default=0,
                         help="whether to do sliding batching edit")
 parser.add_argument('--grouped_batching', type=int, default=0,
                         help="whether to do grouped batching edit")
+parser.add_argument('--delay_batching', type=int, default=0,
+                        help="whether to do delay batching edit")
 parser.add_argument('--use_betweenness_centrality', type=str2bool, default=True,
                     help="Whether to compute and use betweenness centrality.")
+parser.add_argument('--use_closeness_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use closeness centrality.")
+parser.add_argument('--use_eigenvector_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use eigenvector centrality.")
+parser.add_argument('--use_combined_centrality', type=str2bool, default=True,
+                    help="Whether to compute and use combined (degree and betweenness) centrality.")
 
 MAX_NUM_EDIT_STEPS = 200
 MAX_NUM_EDIT_STEPS_FOR_BATCH = 200
@@ -152,7 +160,9 @@ if __name__ == '__main__':
                                                         num_classes=num_classes,
                                                         num_samples=args.num_samples,
                                                         criterion=args.criterion,
-                                                        from_valid_set=True)
+                                                        from_valid_set=True,
+                                                        )
+    # sort_by='betweenness'
 
     if '_MLP' in model_config['arch_name']:
         model.freeze_module(train=False) ### train MLP module and freeze GNN module
@@ -202,7 +212,7 @@ if __name__ == '__main__':
 
     print(f'the calculated stats after batch edit with batch size {args.num_samples}, '
             f'max allocated steps: {MAX_NUM_EDIT_STEPS_FOR_BATCH}')
-    batch_results = trainer.eval_edit_quality(node_idx_2flip=node_idx_2flip,
+    batch_results = trainer.eval_edit_quality2(node_idx_2flip=node_idx_2flip,
                                         flipped_label=flipped_label,
                                         whole_data=whole_data,
                                         max_num_step=MAX_NUM_EDIT_STEPS_FOR_BATCH,
@@ -212,11 +222,12 @@ if __name__ == '__main__':
                                         mixup_training_samples_idx=mixup_training_samples_idx,
                                         mixup_label=mixup_label)
     print(batch_results)
-    summary = {'seq_edit': seq_results,
-               'ind_edit': ind_results,
+    summary = {# 'seq_edit': seq_results,
+               # 'ind_edit': ind_results,
                'batch_edit': batch_results,
                'model_config': model_config,
                'bef_edit_ft_results': bef_edit_ft_results}
+    print("Summary content before writing to JSON:", summary)
     root_json = f'{args.output_dir}/{args.dataset}/{args.manner}/'
     if not os.path.exists(root_json):
         os.makedirs(root_json)
@@ -250,6 +261,10 @@ if __name__ == '__main__':
             json_name += f"_{args.wrong_ratio_mixup}_wrong_sample_mixup_"
         json_name += f'{MODEL_FAMILY.__name__}_{args.criterion}_eval.json'
     elif args.manner == 'GD_Diff':
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
+    elif args.manner == 'MSE':
+        json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
+    elif args.manner == 'COSINE':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'
     elif args.manner == 'Ada_GD_Diff':
         json_name = root_json + f'{MODEL_FAMILY.__name__}_{args.criterion}_eval_hyper_Diff={args.hyper_Diff}.json'

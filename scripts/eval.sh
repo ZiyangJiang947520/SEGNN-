@@ -20,13 +20,13 @@ criterion=wrong2correct
 ## cora flickr reddit2 arxiv amazoncomputers amazonphoto coauthorcs coauthorphysics yelp products
 
 for manner in GD; do    ### GD GD_Diff Ada_GD_Diff
-for dataset in amazoncomputers; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
+for dataset in cora; do ### coauthorcs cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 # for dataset in cora; do ### cora flickr reddit2 arxiv amazoncomputers amazonphoto wikics yelp products
 for model in gcn_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
     if ! [ -d "./${output_dir}/${dataset}/${manner}" ]; then
         mkdir -p "./${output_dir}/${dataset}/${manner}"
     fi
-    CUDA_VISIBLE_DEVICES=$1 python ./eval.py \
+    CUDA_VISIBLE_DEVICES=$1 python ./eval2.py \
         --config ./config/${model}.yaml \
         --dataset ${dataset} \
         --output_dir ${output_dir} \
@@ -41,10 +41,16 @@ for model in gcn_mlp; do ###gcn sage mlp gcn_mlp sage_mlp gat gat_mlp
         --iters_before_stop 0 \
         --full_edit 0 \
         --mixup_k_nearest_neighbors True \
-        --incremental_batching True \
+        --incremental_batching False \
         --sliding_batching 0 \
         --pure_egnn 0 \
         --wrong_ratio_mixup 0.0 \
+        --grouped_batching 5 \
+        --delay_batching 0 \
+        --use_betweenness_centrality False\
+        --use_closeness_centrality False\
+        --use_eigenvector_centrality False\
+        --use_combined_centrality False\
         --criterion ${criterion} 2>&1 | tee ${output_dir}/${dataset}/${manner}/${model}_${criterion}_eval.log
 done
 done
